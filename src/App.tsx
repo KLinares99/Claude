@@ -1,33 +1,48 @@
 import { useState } from 'react';
-import Navbar from './components/Navbar';
+import Nav, { type Tab } from './components/Nav';
 import Dashboard from './components/Dashboard';
-import TrainingZones from './components/TrainingZones';
-import TrainingPlans from './components/TrainingPlans';
-import Nutrition from './components/Nutrition';
-import Recovery from './components/Recovery';
-import ScienceHub from './components/ScienceHub';
+import RunHub from './components/run/RunHub';
+import CalisthenicsHub from './components/cal/CalisthenicsHub';
+import Knowledge from './components/Knowledge';
+import Schedule from './components/Schedule';
+
+const titles: Record<Tab, string> = {
+  dashboard: 'FORGE',
+  run: 'Run',
+  cal: 'Calisthenics',
+  knowledge: 'Knowledge',
+  schedule: 'Schedule'
+};
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-
-  const renderTab = () => {
-    switch (activeTab) {
-      case 'dashboard': return <Dashboard />;
-      case 'zones': return <TrainingZones />;
-      case 'plans': return <TrainingPlans />;
-      case 'nutrition': return <Nutrition />;
-      case 'recovery': return <Recovery />;
-      case 'science': return <ScienceHub />;
-      default: return <Dashboard />;
-    }
-  };
+  const [tab, setTab] = useState<Tab>('dashboard');
 
   return (
-    <div className="min-h-screen bg-slate-950">
-      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {renderTab()}
+    <div className="min-h-screen bg-forge-bg">
+      <header
+        className="sticky top-0 z-30 border-b border-forge-border bg-forge-bg/90 backdrop-blur"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        <div className="max-w-[480px] mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-forge-orange text-xl">🔥</span>
+            <h1 className="font-black tracking-tight text-lg text-white">{titles[tab]}</h1>
+          </div>
+          {tab === 'dashboard' && (
+            <span className="text-[11px] text-forge-dim">Forged, not given</span>
+          )}
+        </div>
+      </header>
+
+      <main className="max-w-[480px] mx-auto px-4 pt-4 pb-28">
+        {tab === 'dashboard' && <Dashboard onNavigate={setTab} />}
+        {tab === 'run' && <RunHub />}
+        {tab === 'cal' && <CalisthenicsHub />}
+        {tab === 'knowledge' && <Knowledge />}
+        {tab === 'schedule' && <Schedule />}
       </main>
+
+      <Nav active={tab} onChange={setTab} />
     </div>
   );
 }

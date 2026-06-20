@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [claude/running-learning-hub-app-g4r6gr]
+    branches: [claude/exciting-euler-ls7fm3, claude/running-learning-hub-app-g4r6gr]
 
 permissions:
   contents: read
