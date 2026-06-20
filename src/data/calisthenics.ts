@@ -1,4 +1,4 @@
-// FORGE calisthenics engine — skill trees + accessory loggers.
+// INVINCIBLE calisthenics engine — skill trees + accessory loggers.
 // Skills are modeled as progression ladders (the ladder IS the load).
 
 export type ToolType = 'reps' | 'hold';

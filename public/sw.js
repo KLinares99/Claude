@@ -1,7 +1,7 @@
-/* FORGE service worker — offline app shell.
+/* INVINCIBLE service worker — offline app shell.
    Network-first for navigations (so updates land), cache-first for static
    assets. Bump CACHE to invalidate after a deploy. */
-const CACHE = 'forge-v1';
+const CACHE = 'invincible-v1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

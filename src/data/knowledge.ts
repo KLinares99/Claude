@@ -79,7 +79,7 @@ export const calPrinciples: Principle[] = [
   },
   {
     title: 'Push / Pull Balance',
-    body: 'Heavy pulling (pull-ups, levers, muscle-up) without matching push (dips, planche, HSPU) breeds shoulder imbalance. FORGE tracks the ratio and flags drift.',
+    body: 'Heavy pulling (pull-ups, levers, muscle-up) without matching push (dips, planche, HSPU) breeds shoulder imbalance. INVINCIBLE tracks the ratio and flags drift.',
     citation: 'Structural balance — Poliquin'
   },
   {

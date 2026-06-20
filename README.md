@@ -1,11 +1,12 @@
-# 🔥 FORGE — Unified Training App
+# INVINCIBLE — Unified Training App
 
 A science-backed personal training PWA that combines a **running tracker**
 (Rockland Lake 3.2mi loop, chasing sub-32) with a **skills-focused
 calisthenics engine** (muscle-up, handstand, levers, planche) — sharing one
 data store, one streak, and one combined dashboard.
 
-> Working title **FORGE**. Branding/icon are easy to swap (see `scripts/generate-icons.mjs`).
+> Branded **INVINCIBLE** (blue + yellow comic colors). Icon is generated in
+> `scripts/generate-icons.mjs` and easy to swap.
 
 ## Stack
 - **React + Vite + TypeScript**, Tailwind, Recharts, lucide-react

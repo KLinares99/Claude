@@ -7,7 +7,7 @@ import Knowledge from './components/Knowledge';
 import Schedule from './components/Schedule';
 
 const titles: Record<Tab, string> = {
-  dashboard: 'FORGE',
+  dashboard: 'INVINCIBLE',
   run: 'Run',
   cal: 'Calisthenics',
   knowledge: 'Knowledge',
@@ -25,11 +25,16 @@ export default function App() {
       >
         <div className="max-w-[480px] mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-forge-orange text-xl">🔥</span>
+            <span
+              className="w-6 h-6 rounded-md flex items-center justify-center font-black text-sm leading-none"
+              style={{ background: '#1f4ea1', color: '#ffd21e' }}
+            >
+              I
+            </span>
             <h1 className="font-black tracking-tight text-lg text-white">{titles[tab]}</h1>
           </div>
           {tab === 'dashboard' && (
-            <span className="text-[11px] text-forge-dim">Forged, not given</span>
+            <span className="text-[11px] text-forge-dim">Nothing is impossible</span>
           )}
         </div>
       </header>

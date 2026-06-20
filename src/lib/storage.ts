@@ -1,5 +1,5 @@
 /**
- * FORGE shared data store.
+ * INVINCIBLE shared data store.
  * One namespaced object in localStorage (`forge:v1`) used by BOTH engines.
  * Every run log and every calisthenics log also appends to `sessions`,
  * which drives the unified streak + weekly count.
