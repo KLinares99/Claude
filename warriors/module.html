@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Warriors Project — Module</title>
+  <meta name="theme-color" content="#0A1628" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 L27 7 V16 C27 23 22 28 16 30 C10 28 5 23 5 16 V7 Z' fill='none' stroke='%23E0B44A' stroke-width='2'/%3E%3Cpath d='M16 9 L16 23 M11 14 L21 14' stroke='%23E0B44A' stroke-width='2'/%3E%3C/svg%3E" />
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="brandmark" href="index.html">
+      <svg class="sigil" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 2 L27 7 V16 C27 23 22 28 16 30 C10 28 5 23 5 16 V7 Z" fill="none" stroke="#E0B44A" stroke-width="2"/>
+        <path d="M16 9 L16 23 M11 14 L21 14" stroke="#E0B44A" stroke-width="2"/>
+      </svg>
+      <span class="name">WARRIORS</span>
+      <span class="tag">Transforming Pain Into Power</span>
+    </a>
+    <nav>
+      <a href="index.html#path">The Path</a>
+      <a class="btn ghost" href="index.html">All Modules</a>
+    </nav>
+  </header>
+
+  <main class="reader" id="reader"><!-- injected --></main>
+
+  <footer class="site-footer">
+    <div class="fm">THE WARRIORS PROJECT</div>
+    <div class="ft">Heal · Find Purpose · Be Restored</div>
+  </footer>
+
+  <script src="assets/data.js"></script>
+  <script src="assets/app.js"></script>
+  <script>WarriorsApp.renderModule();</script>
+</body>
+</html>
