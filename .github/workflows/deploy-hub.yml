@@ -1,0 +1,59 @@
+name: Deploy hub (INVINCIBLE + Warriors) to GitHub Pages
+
+# A repo has exactly one GitHub Pages site, so both apps are published under
+# one deploy at separate sub-paths — neither overwrites the other:
+#   /Claude/             -> hub landing page (links to both)
+#   /Claude/invincible/  -> the running app (Vite build)
+#   /Claude/warriors/    -> the Warriors Project demo (static)
+
+on:
+  push:
+    branches: [claude/awesome-ptolemy-9m89lv]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Build the running app (INVINCIBLE) rooted at /Claude/invincible/
+      - run: npm ci
+      - run: npm run build -- --base=/Claude/invincible/
+
+      # Assemble the combined site
+      - name: Assemble site
+        run: |
+          rm -rf site
+          mkdir -p site/invincible site/warriors
+          cp -r dist/. site/invincible/
+          cp -r warriors/. site/warriors/
+          cp landing/index.html site/index.html
+          # Stop Jekyll from touching the static files
+          touch site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - uses: actions/deploy-pages@v4
+        id: deployment
