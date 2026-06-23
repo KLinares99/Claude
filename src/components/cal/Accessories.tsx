@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Minus, Plus, Check, Trophy } from 'lucide-react';
 import { useForge, withSession, todayISO } from '../../lib/storage';
+import { toast } from '../../lib/toast';
 import { accessories, type Accessory } from '../../data/calisthenics';
 import { nodeState } from '../../lib/cal';
 import { fmtClock } from '../../lib/run';
@@ -45,6 +46,7 @@ function AccessoryRow({ accessory, best }: { accessory: Accessory; best: number 
       }
       return withSession(d, 'cal');
     });
+    toast(`${accessory.name} logged ✓`);
     setOpen(false);
   }
 
