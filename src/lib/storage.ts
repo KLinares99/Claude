@@ -36,8 +36,20 @@ export interface SessionEntry {
   type: SessionType;
 }
 
+/** A free-form GPS-tracked run (any route/distance), separate from the
+ *  fixed Rockland Lake loop log. Route is a decimated [lat,lng] polyline. */
+export interface GpsRun {
+  id: string;
+  date: string;        // ISO date
+  seconds: number;     // moving time
+  miles: number;       // GPS distance
+  route: [number, number][];
+  note: string;
+}
+
 export interface ForgeData {
   runs: RunEntry[];
+  gpsRuns: GpsRun[];
   cal: {
     nodes: Record<string, NodeState>;
     maxes: { pullups: number; dips: number; pushups: number };
@@ -91,6 +103,7 @@ export function defaultData(): ForgeData {
   const runs = seedRuns();
   return {
     runs,
+    gpsRuns: [],
     cal: {
       nodes: {},
       maxes: { pullups: 9, dips: 12, pushups: 25 }
@@ -111,6 +124,7 @@ export function loadData(): ForgeData {
     // shallow-merge with defaults so new fields don't blow up old saves
     return {
       runs: parsed.runs ?? base.runs,
+      gpsRuns: parsed.gpsRuns ?? base.gpsRuns,
       cal: {
         nodes: parsed.cal?.nodes ?? base.cal.nodes,
         maxes: { ...base.cal.maxes, ...(parsed.cal?.maxes ?? {}) }

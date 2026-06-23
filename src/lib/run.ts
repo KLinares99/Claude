@@ -26,3 +26,44 @@ export function calories(seconds: number, weightLbs: number): number {
   const kg = weightLbs * 0.453592;
   return Math.round(MET_RUNNING * kg * (seconds / 3600));
 }
+
+// ---- GPS helpers -------------------------------------------------------
+
+export type LatLng = [number, number];
+
+/** Great-circle distance between two coordinates, in meters (Haversine). */
+export function haversineMeters(a: LatLng, b: LatLng): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b[0] - a[0]);
+  const dLng = toRad(b[1] - a[1]);
+  const lat1 = toRad(a[0]);
+  const lat2 = toRad(b[0]);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+export const METERS_PER_MILE = 1609.344;
+
+export function metersToMiles(m: number): number {
+  return m / METERS_PER_MILE;
+}
+
+/** Pace string (mm:ss/mi) from a distance + time. Guards against div-by-zero. */
+export function paceFor(seconds: number, miles: number): string {
+  if (miles < 0.01) return '--:--/mi';
+  return fmtTime(seconds / miles) + '/mi';
+}
+
+/** Calories for an arbitrary distance/time using speed-derived MET. */
+export function caloriesGps(seconds: number, miles: number, weightLbs: number): number {
+  if (seconds <= 0) return 0;
+  const mph = miles / (seconds / 3600);
+  // rough MET curve for running: ~ 0.1 * mph in METs, floored to a walk
+  const met = Math.max(3, mph * 1.0 + 3.5);
+  const kg = weightLbs * 0.453592;
+  return Math.round(met * kg * (seconds / 3600));
+}
+
