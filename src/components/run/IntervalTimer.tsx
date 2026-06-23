@@ -5,6 +5,7 @@ import { fmtClock, TARGET_SECONDS } from '../../lib/run';
 import { Metronome, beep, fanfare } from '../../lib/audio';
 import { useWakeLock } from '../../lib/useWakeLock';
 import { useForge, withSession } from '../../lib/storage';
+import { toast } from '../../lib/toast';
 
 interface Phase {
   id: number;
@@ -74,6 +75,7 @@ export default function IntervalTimer() {
       if (!loggedRef.current) {
         loggedRef.current = true;
         update((d) => withSession(d, 'run'));
+        toast('Interval session logged ✓');
       }
       return;
     }

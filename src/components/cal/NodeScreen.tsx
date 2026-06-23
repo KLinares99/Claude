@@ -1,5 +1,6 @@
 import { ChevronLeft, Target, FlaskConical, CheckCircle2 } from 'lucide-react';
 import { useForge, withSession, todayISO } from '../../lib/storage';
+import { toast } from '../../lib/toast';
 import { nodeState, qualifyingSessions, isMastered } from '../../lib/cal';
 import type { SkillNode } from '../../data/calisthenics';
 import { fmtClock } from '../../lib/run';
@@ -32,6 +33,7 @@ export default function NodeScreen({
       d.cal.nodes[node.id] = cur;
       return withSession(d, 'cal');
     });
+    toast(`${node.name} logged ✓`);
   }
 
   const fmtVal = (v: number) => (node.tool === 'hold' ? fmtClock(v) : `${v} reps`);

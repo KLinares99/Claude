@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, R
 import { Trophy, Plus } from 'lucide-react';
 import { useForge, withSession, uid, todayISO, type RunEntry } from '../../lib/storage';
 import { TARGET_SECONDS, fmtTime, calories, pacePerMile } from '../../lib/run';
+import { toast } from '../../lib/toast';
 import Ring from '../ui/Ring';
 
 export default function RunLog() {
@@ -77,12 +78,13 @@ export default function RunLog() {
       </div>
 
       <AddRunForm
-        onAdd={(entry) =>
+        onAdd={(entry) => {
           update((d) => {
             d.runs.push(entry);
             return withSession(d, 'run', entry.date);
-          })
-        }
+          });
+          toast('Run logged ✓');
+        }}
       />
 
       {/* history */}

@@ -7,6 +7,7 @@ import {
 } from '../../lib/run';
 import { useWakeLock } from '../../lib/useWakeLock';
 import { useForge, withSession, uid, todayISO, type GpsRun as GpsRunEntry } from '../../lib/storage';
+import { toast } from '../../lib/toast';
 
 type Phase = 'idle' | 'running' | 'paused';
 
@@ -148,6 +149,7 @@ export default function GpsRun() {
         d.gpsRuns = [...d.gpsRuns, entry];
         return withSession(d, 'run');
       });
+      toast(`GPS run saved ✓ ${entry.miles.toFixed(2)} mi`);
     }
     setPhase('idle');
   }

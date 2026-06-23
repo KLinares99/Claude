@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { Database } from 'lucide-react';
 import Nav, { type Tab } from './components/Nav';
 import Dashboard from './components/Dashboard';
 import RunHub from './components/run/RunHub';
 import CalisthenicsHub from './components/cal/CalisthenicsHub';
 import Knowledge from './components/Knowledge';
 import Schedule from './components/Schedule';
+import DataPanel from './components/DataPanel';
+import Toast from './components/ui/Toast';
 
 const titles: Record<Tab, string> = {
   dashboard: 'INVINCIBLE',
@@ -16,6 +19,7 @@ const titles: Record<Tab, string> = {
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('dashboard');
+  const [showData, setShowData] = useState(false);
 
   return (
     <div className="min-h-screen bg-forge-bg">
@@ -33,9 +37,14 @@ export default function App() {
             </span>
             <h1 className="font-black tracking-tight text-lg text-white">{titles[tab]}</h1>
           </div>
-          {tab === 'dashboard' && (
-            <span className="text-[11px] text-forge-dim">Nothing is impossible</span>
-          )}
+          <button
+            onClick={() => setShowData(true)}
+            className="flex items-center gap-1.5 text-forge-dim hover:text-forge-teal"
+            aria-label="Data and backup"
+          >
+            <Database size={18} />
+            <span className="text-[11px] font-semibold">Data</span>
+          </button>
         </div>
       </header>
 
@@ -48,6 +57,8 @@ export default function App() {
       </main>
 
       <Nav active={tab} onChange={setTab} />
+      {showData && <DataPanel onClose={() => setShowData(false)} />}
+      <Toast />
     </div>
   );
 }
