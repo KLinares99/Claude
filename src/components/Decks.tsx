@@ -2,6 +2,7 @@ import { Lock, Unlock, Check } from 'lucide-react';
 import { DECKS, deckCounts } from '../data/cards';
 import { useGame } from '../lib/store';
 import { toast } from '../lib/toast';
+import DeckArt from './DeckArt';
 
 export default function Decks() {
   const { state, update } = useGame();
@@ -37,6 +38,7 @@ export default function Decks() {
               className="rounded-3xl p-5 shadow-card relative overflow-hidden"
               style={{ background: `linear-gradient(150deg, ${d.from} 0%, ${d.to} 100%)`, color: d.ink }}
             >
+              <DeckArt color={d.ink} />
               <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/20 blur-2xl" />
               <div className="relative flex items-start justify-between gap-3">
                 <div>

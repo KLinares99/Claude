@@ -4,6 +4,7 @@ import { cardById, pickNext, remainingCards, resolveCard, eligibleCards } from '
 import { toast } from '../lib/toast';
 import Setup from './Setup';
 import GameCard from './GameCard';
+import Confetti from './Confetti';
 
 // Compute the next session state after handling the current card.
 // `count` = the card was actually played (advances turn + tallies), vs a skip.
@@ -55,14 +56,15 @@ export default function Play() {
   if (!card) {
     const total = eligibleCards(state).length;
     return (
-      <div className="panel p-8 text-center space-y-4 animate-pop-in">
-        <PartyPopper size={48} className="mx-auto text-tou-rose" />
-        <h2 className="text-2xl font-display font-bold text-tou-ink">That's the whole deck!</h2>
-        <p className="text-tou-dim">
+      <div className="panel p-8 text-center space-y-4 animate-pop-in relative overflow-hidden">
+        <Confetti />
+        <PartyPopper size={48} className="mx-auto text-tou-rose relative" />
+        <h2 className="text-2xl font-display font-bold text-tou-ink relative">That's the whole deck!</h2>
+        <p className="text-tou-dim relative">
           You two went through <b className="text-tou-ink">{session.played}</b> cards together
           {total ? ` out of ${total}` : ''}. Nicely done. 💛
         </p>
-        <div className="flex flex-col gap-2 pt-2">
+        <div className="flex flex-col gap-2 pt-2 relative">
           <button onClick={playAgain} className="btn-primary w-full">
             <RotateCcw size={18} /> Shuffle & play again
           </button>
