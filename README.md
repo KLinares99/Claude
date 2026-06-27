@@ -1,39 +1,44 @@
-# INVINCIBLE — Unified Training App
+# Two of Us — a couples card game 💛
 
-A science-backed personal training PWA that combines a **running tracker**
-(Rockland Lake 3.2mi loop, chasing sub-32) with a **skills-focused
-calisthenics engine** (muscle-up, handstand, levers, planche) — sharing one
-data store, one streak, and one combined dashboard.
+A playful, mobile-first card game for two people and one phone. You take turns
+drawing prompt cards that range from **funny** to **deeply personal** to
+**a little spicy** — all designed to put the phone down and actually talk.
 
-> Branded **INVINCIBLE** (blue + yellow comic colors). Icon is generated in
-> `scripts/generate-icons.mjs` and easy to swap.
+> Warm, candy-bright aesthetic. Fully private: no accounts, no network, nothing
+> leaves the device. Works offline as an installable PWA.
 
 ## Stack
-- **React + Vite + TypeScript**, Tailwind, Recharts, lucide-react
+- **React + Vite + TypeScript**, Tailwind, lucide-react
 - **PWA**: web manifest, service worker (offline app shell), installable, app icon
-- **Wake Lock API** for the timer screens (true background audio needs a native
-  Capacitor wrapper — documented as a future step)
-- **Web Audio** metronome + cue beeps via a lookahead scheduler
-- **localStorage** single namespaced store (`forge:v1`) shared by both engines
+- **localStorage** single namespaced store (`twoofus:v1`) — players, config,
+  favorites, session progress, lifetime stats
+- No backend. Intimate content stays on-device by design.
 
-## Five sections
-1. **Dashboard** — combined snapshot: PR + ring to sub-32, featured skill,
-   mastered-node counts, push/pull balance, unified streak, next session, week.
-2. **Run** — Log (PR hero, sub-32 ring, chart vs target, add-run, history) ·
-   Interval Timer (4 phases, run/walk cues, cadence metronome, wake lock) ·
-   Game Plan (4 phases + 3 rules).
-3. **Calisthenics** — skill trees (Muscle-Up, Handstand, Front/Back Lever,
-   Planche) as progression ladders + per-node rep logger / hold timer +
-   graduation logic, plus balance/accessory loggers.
-4. **Knowledge** — citation-driven science library (running + calisthenics).
-5. **Schedule** — merged weekly plan, color-coded, with 3:1 deload indicator.
+## How it plays
+1. **Setup** — enter two names, pick your decks, choose how deep to go tonight
+   (Warm up → Going deeper → No filter).
+2. **Play** — one card at a time on a big colorful face. Turns alternate; the
+   active player reads it out loud. Cards are tagged by who's on the spot
+   (you / your partner / both) and by type:
+   - **Question** — answer honestly
+   - **Guess** — predict what your partner will say, then find out
+   - **Dare** — a small playful action
+   The game eases in with gentle cards before going deep.
+3. **Save** — tap the heart to keep prompts that spark something; they collect
+   in your **Saved jar**.
 
-## Data model (`forge:v1`)
+## The four decks
+| Deck | Vibe |
+|------|------|
+| 🍿 **Sweet & Funny** | Easy, playful warm-ups and silly hypotheticals |
+| 📸 **Memories & Us** | First impressions, favorite moments, inside jokes |
+| 🌙 **Deep & Personal** | Honest, tender questions that open real conversation |
+| 🔥 **Spicy** | Flirty to steamy — **18+**, locked behind a confirm gate |
+
+## Data model (`twoofus:v1`)
 ```
-{ runs[], cal: { nodes{}, maxes{} }, sessions[], settings{} }
+{ players{a,b}, config{decks,maxLevel,spicyUnlocked}, session{...}, favorites[], stats{...} }
 ```
-Every run log and every calisthenics log also appends to `sessions`, which
-drives the unified streak (consecutive days with ≥1 entry) and weekly count.
 
 ## Develop
 ```bash
@@ -44,12 +49,8 @@ npm run preview  # serve the production build (base path /Claude/)
 npm run icons    # regenerate PWA icons into public/
 ```
 
-## Deploy
-GitHub Pages via `.github/workflows/deploy.yml` (base path `/Claude/`).
-
-## Graduation rules (science-backed)
-- **Holds** (handstand, levers, planche): master at **3 sessions ≥ target hold**.
-- **Reps** (muscle-up ladder, pulls, dips): master at **3 sets × target reps**.
-- Skills go **fresh, first** (CNS-demanding) — encoded as in-app guidance.
-- **Greasing the Groove** (Pavel), **leverage overload** (Convict Conditioning),
-  **3:1 periodization** (Bompa), **push/pull balance** tracking.
+## Adding cards
+Everything lives in `src/data/cards.ts`. Each card has a stable `id`, a `deck`,
+a `level` (1–3), a `type` (`ask` / `guess` / `dare`), and `to`
+(`self` / `partner` / `both`, relative to whoever drew it). Use `{partner}` in
+the text to inject the other player's name.

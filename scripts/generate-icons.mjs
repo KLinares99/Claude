@@ -1,5 +1,5 @@
-// Generates INVINCIBLE PWA icons (PNG) with no external deps — built-in zlib.
-// A bold serif "I" lettermark in the iconic Invincible blue + yellow.
+// Generates "Two of Us" PWA icons (PNG) with no external deps — built-in zlib.
+// Two overlapping hearts (sunny + rose) on a warm cream rounded tile.
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
@@ -44,46 +44,46 @@ function png(width, height, rgba) {
   return Buffer.concat([sig, chunk('IHDR', ihdr), chunk('IDAT', idat), chunk('IEND', Buffer.alloc(0))]);
 }
 
-function lerp(a, b, t) { return a + (b - a) * t; }
-function mix(c1, c2, t) { return [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)]; }
+// Palette
+const CREAM = [255, 244, 236];   // tile background
+const SUN = [255, 201, 60];      // back heart
+const ROSE = [255, 93, 143];     // front heart
 
-// Iconic Invincible costume colors
-const BLUE_TOP = [42, 95, 192];    // brighter suit blue
-const BLUE_BOT = [16, 38, 96];     // deep navy
-const YELLOW_TOP = [255, 224, 56]; // #ffe038
-const YELLOW_BOT = [245, 184, 0];  // #f5b800
-
-// Bold serif "I": stem + top/bottom serif bars.
-function isLetterI(nx, ny) {
-  // nx, ny in [0,1]
-  const inStem = nx >= 0.405 && nx <= 0.595 && ny >= 0.24 && ny <= 0.76;
-  const inTop = nx >= 0.28 && nx <= 0.72 && ny >= 0.22 && ny <= 0.325;
-  const inBot = nx >= 0.28 && nx <= 0.72 && ny >= 0.675 && ny <= 0.78;
-  return inStem || inTop || inBot;
+// Implicit heart curve, centered at (cx,cy) scaled by s. <= 0 means inside.
+function heartInside(px, py, cx, cy, s) {
+  const x = (px - cx) / s;
+  const y = -(py - cy) / s; // flip so the lobes point up
+  const a = x * x + y * y - 1;
+  return a * a * a - x * x * y * y * y <= 0;
 }
 
 function render(size) {
   const buf = Buffer.alloc(size * size * 4);
   const radius = size * 0.22;
+  const back = { cx: size * 0.6, cy: size * 0.44, s: size * 0.2 };
+  const front = { cx: size * 0.42, cy: size * 0.55, s: size * 0.26 };
+
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const i = (y * size + x) * 4;
-      // rounded-rect alpha
-      let a = 255;
+      // rounded-rect tile alpha
+      let tileA = 255;
       const rx = Math.min(x, size - 1 - x);
       const ry = Math.min(y, size - 1 - y);
       if (rx < radius && ry < radius) {
         const dx = radius - rx, dy = radius - ry;
-        if (dx * dx + dy * dy > radius * radius) a = 0;
+        if (dx * dx + dy * dy > radius * radius) tileA = 0;
       }
+
       const t = y / size;
-      let [r, g, b] = mix(BLUE_TOP, BLUE_BOT, t);
-      const nx = x / size;
-      const ny = y / size;
-      if (isLetterI(nx, ny)) {
-        [r, g, b] = mix(YELLOW_TOP, YELLOW_BOT, ny);
-      }
-      buf[i] = Math.round(r); buf[i + 1] = Math.round(g); buf[i + 2] = Math.round(b); buf[i + 3] = a;
+      let r = Math.round(CREAM[0] - t * 6);
+      let g = Math.round(CREAM[1] - t * 10);
+      let b = Math.round(CREAM[2] - t * 14);
+
+      if (heartInside(x, y, back.cx, back.cy, back.s)) { r = SUN[0]; g = SUN[1]; b = SUN[2]; }
+      if (heartInside(x, y, front.cx, front.cy, front.s)) { r = ROSE[0]; g = ROSE[1]; b = ROSE[2]; }
+
+      buf[i] = r; buf[i + 1] = g; buf[i + 2] = b; buf[i + 3] = tileA;
     }
   }
   return png(size, size, buf);
@@ -92,7 +92,7 @@ function render(size) {
 const targets = [
   ['icon-192.png', 192],
   ['icon-512.png', 512],
-  ['apple-touch-icon.png', 180]
+  ['apple-touch-icon.png', 180],
 ];
 for (const [name, size] of targets) {
   writeFileSync(new URL(name, OUT), render(size));

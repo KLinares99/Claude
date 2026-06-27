@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { onToast } from '../../lib/toast';
 
 interface Item {
@@ -30,10 +30,10 @@ export default function Toast() {
       {items.map((i) => (
         <div
           key={i.id}
-          className="flex items-center gap-2 rounded-xl bg-forge-panel2 border border-forge-green/40 px-4 py-2.5 shadow-lg max-w-[480px] w-full"
+          className="flex items-center gap-2 rounded-2xl bg-tou-ink text-white px-4 py-2.5 shadow-card max-w-[480px] w-full"
         >
-          <CheckCircle2 size={18} className="text-forge-green shrink-0" />
-          <span className="text-sm text-white">{i.msg}</span>
+          <Heart size={16} className="text-tou-rose shrink-0" fill="currentColor" />
+          <span className="text-sm">{i.msg}</span>
         </div>
       ))}
     </div>

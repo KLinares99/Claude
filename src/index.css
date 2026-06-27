@@ -1,18 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   html {
-    background: #0b1418;
+    background: #fff4ec;
   }
   body {
-    @apply text-slate-100;
-    background: #0b1418;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    @apply text-tou-ink;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, #ffe3d6 0%, transparent 55%),
+      radial-gradient(1000px 600px at 110% 10%, #ffd9e6 0%, transparent 50%),
+      #fff4ec;
+    background-attachment: fixed;
+    font-family: 'Fredoka', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
-  /* tabular numbers everywhere stats/timers live */
   .nums {
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum';
@@ -20,41 +25,28 @@
 }
 
 @layer components {
-  .card {
-    @apply bg-forge-panel border border-forge-border rounded-2xl p-5;
+  .panel {
+    @apply bg-tou-paper rounded-3xl border border-tou-sand shadow-soft;
   }
-  .card-tight {
-    @apply bg-forge-panel border border-forge-border rounded-2xl p-4;
-  }
-  .badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
-  }
-  .cite {
-    @apply text-[11px] text-forge-dim/80 italic;
-  }
-  .stat-num {
-    @apply font-black nums tracking-tight;
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition-all;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition-all active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply btn bg-forge-teal text-[#06222a] hover:bg-[#4ac6d4] px-4 py-2.5;
+    @apply btn bg-tou-rose text-white px-5 py-3.5 shadow-pop hover:brightness-105;
   }
   .btn-ghost {
-    @apply btn bg-forge-panel2 text-slate-200 border border-forge-border hover:bg-[#1c2f37] px-4 py-2.5;
+    @apply btn bg-tou-paper text-tou-ink border border-tou-sand px-5 py-3.5 hover:bg-tou-cream;
+  }
+  .btn-soft {
+    @apply btn bg-tou-cream text-tou-ink px-4 py-2.5 hover:bg-tou-sand;
   }
   .input {
-    @apply bg-forge-bg border border-forge-border rounded-xl px-3 py-2 text-slate-100 nums focus:outline-none focus:border-forge-teal;
+    @apply bg-tou-cream border border-tou-sand rounded-2xl px-4 py-3 text-tou-ink placeholder:text-tou-dim focus:outline-none focus:border-tou-rose focus:ring-2 focus:ring-tou-rose/20;
   }
-  .section-title {
-    @apply text-xl font-bold text-white;
-  }
-  .section-sub {
-    @apply text-forge-dim text-sm;
+  .label {
+    @apply text-xs font-bold uppercase tracking-wider text-tou-dim;
   }
 }
-
-/* hide scrollbars on the horizontal sub-tab rows */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
