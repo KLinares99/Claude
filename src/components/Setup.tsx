@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Play as PlayIcon, Lock } from 'lucide-react';
 import { DECKS, type DeckId, type Level } from '../data/cards';
 import { useGame } from '../lib/store';
-import Logo from './Logo';
 
 const DEPTHS: { lv: Level; label: string; sub: string }[] = [
   { lv: 1, label: 'Warm up', sub: 'easy & playful' },
@@ -49,14 +48,21 @@ export default function Setup({ onStart }: { onStart: () => void }) {
 
   return (
     <div className="space-y-5">
-      <div className="text-center pt-2">
-        <div className="inline-block animate-float">
-          <Logo size={56} />
+      <div className="pt-1">
+        <div className="overflow-hidden rounded-[1.75rem] border border-tou-sand shadow-soft">
+          <img
+            src={`${import.meta.env.BASE_URL}hero.webp`}
+            alt="A couple sitting together on a couch, smiling and playing a card game"
+            className="w-full h-48 object-cover"
+            style={{ objectPosition: 'center 45%' }}
+          />
         </div>
-        <h2 className="mt-2 text-2xl font-display font-bold text-tou-ink">Just the two of you.</h2>
-        <p className="text-tou-dim text-sm mt-1">
-          One phone, taking turns. Pick your decks and how deep you want to go.
-        </p>
+        <div className="text-center mt-4">
+          <h2 className="text-2xl font-display font-bold text-tou-ink">Just the two of you.</h2>
+          <p className="text-tou-dim text-sm mt-1">
+            One phone, taking turns. Pick your decks and how deep you want to go.
+          </p>
+        </div>
       </div>
 
       <div className="panel p-5 space-y-3">
