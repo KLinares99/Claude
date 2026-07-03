@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { X, Trash2, Pencil, Check } from 'lucide-react';
+import { X, Trash2, Pencil, Check, Share2 } from 'lucide-react';
 import { useStore, type Activity } from '../lib/storage';
 import { fmtClock, paceFor, fmtRelDate, caloriesFor } from '../lib/run';
 import { toast } from '../lib/toast';
+import ShareCard from './ShareCard';
 
 /** Full-screen activity page — map, stats, mile splits, rename, delete. */
 export default function ActivityDetail({ activity, onClose }: { activity: Activity; onClose: () => void }) {
   const { data, update } = useStore();
   const [editing, setEditing] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [name, setName] = useState(activity.name);
   const mapDiv = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -72,9 +74,14 @@ export default function ActivityDetail({ activity, onClose }: { activity: Activi
             <X size={24} />
           </button>
           <span className="text-sm font-bold">{fmtRelDate(activity.date)}</span>
-          <button onClick={del} className="p-1 -mr-1 text-dim hover:text-bad" aria-label="Delete">
-            <Trash2 size={20} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setSharing(true)} className="p-1 text-dim hover:text-brand" aria-label="Share">
+              <Share2 size={20} />
+            </button>
+            <button onClick={del} className="p-1 -mr-1 text-dim hover:text-bad" aria-label="Delete">
+              <Trash2 size={20} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -103,7 +110,9 @@ export default function ActivityDetail({ activity, onClose }: { activity: Activi
         </div>
 
         {activity.route.length > 1 && (
-          <div className="card !p-0 overflow-hidden">
+          // isolate traps leaflet's internal z-indexes (200-800) so the map
+          // can't paint over the sticky header or the share modal
+          <div className="card !p-0 overflow-hidden isolate">
             <div ref={mapDiv} className="w-full h-64" />
           </div>
         )}
@@ -145,6 +154,8 @@ export default function ActivityDetail({ activity, onClose }: { activity: Activi
           <div className="card-pad text-sm text-dim">{activity.note}</div>
         )}
       </main>
+
+      {sharing && <ShareCard activity={activity} onClose={() => setSharing(false)} />}
     </div>
   );
 }

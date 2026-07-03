@@ -90,7 +90,9 @@ export default function Record({ active }: { active: boolean }) {
 
       {/* GPS run — the map stays in the DOM even in intervals mode */}
       <div className={mode === 'run' ? 'space-y-4' : 'hidden'}>
-        <div className="card !p-0 overflow-hidden relative">
+        {/* isolate traps leaflet's internal z-indexes so the map can't
+            paint over the app header, nav or modals */}
+        <div className="card !p-0 overflow-hidden relative isolate">
           <div ref={mapDiv} className="w-full h-64" />
           <div className="absolute top-3 right-3 z-[500]">
             <span
