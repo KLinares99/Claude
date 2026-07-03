@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [claude/exciting-euler-ls7fm3, claude/running-learning-hub-app-g4r6gr, claude/invincible-app-override-84n9mj]
+    branches: [claude/exciting-euler-ls7fm3, claude/running-learning-hub-app-g4r6gr, claude/invincible-app-override-84n9mj, claude/strava-running-app-clone-tm06e6]
 
 permissions:
   contents: read
