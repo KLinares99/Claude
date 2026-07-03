@@ -4,11 +4,10 @@
 
 @layer base {
   html {
-    background: #0b1418;
+    background: #f7f6f3;
   }
   body {
-    @apply text-slate-100;
-    background: #0b1418;
+    @apply text-ink bg-paper;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
@@ -21,40 +20,57 @@
 
 @layer components {
   .card {
-    @apply bg-forge-panel border border-forge-border rounded-2xl p-5;
+    @apply bg-card border border-line rounded-2xl shadow-card;
   }
-  .card-tight {
-    @apply bg-forge-panel border border-forge-border rounded-2xl p-4;
-  }
-  .badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
-  }
-  .cite {
-    @apply text-[11px] text-forge-dim/80 italic;
+  .card-pad {
+    @apply card p-4;
   }
   .stat-num {
-    @apply font-black nums tracking-tight;
+    @apply font-black nums tracking-tight text-ink;
+  }
+  .label {
+    @apply text-[11px] font-semibold uppercase tracking-wider text-faint;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed select-none;
   }
   .btn-primary {
-    @apply btn bg-forge-teal text-[#06222a] hover:bg-[#4ac6d4] px-4 py-2.5;
+    @apply btn bg-brand text-white hover:bg-brand-dark px-4 py-2.5 active:scale-[0.99];
   }
   .btn-ghost {
-    @apply btn bg-forge-panel2 text-slate-200 border border-forge-border hover:bg-[#1c2f37] px-4 py-2.5;
+    @apply btn bg-card text-ink border border-line hover:bg-paper px-4 py-2.5;
+  }
+  .btn-danger {
+    @apply btn bg-card text-bad border border-line hover:bg-red-50 px-4 py-2.5;
   }
   .input {
-    @apply bg-forge-bg border border-forge-border rounded-xl px-3 py-2 text-slate-100 nums focus:outline-none focus:border-forge-teal;
+    @apply bg-card border border-line rounded-xl px-3 py-2 text-ink nums placeholder:text-faint focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/15;
   }
-  .section-title {
-    @apply text-xl font-bold text-white;
-  }
-  .section-sub {
-    @apply text-forge-dim text-sm;
+  .chip {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
   }
 }
 
-/* hide scrollbars on the horizontal sub-tab rows */
+/* hide scrollbars on horizontal scroller rows */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* leaflet chrome tweaks — softer, matches the card radius */
+.leaflet-container {
+  font-family: inherit;
+  background: #e9e7e2;
+}
+.leaflet-control-attribution {
+  font-size: 9px !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+  color: #9ca3af !important;
+}
+
+/* pulsing "recording" dot */
+@keyframes rec-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.rec-dot {
+  animation: rec-pulse 1.4s ease-in-out infinite;
+}

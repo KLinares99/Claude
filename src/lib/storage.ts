@@ -1,135 +1,113 @@
 /**
- * INVINCIBLE shared data store.
- * One namespaced object in localStorage (`forge:v1`) used by BOTH engines.
- * Every run log and every calisthenics log also appends to `sessions`,
- * which drives the unified streak + weekly count.
+ * RUNNER data store.
+ * One namespaced object in localStorage (`runner:v1`). Old INVINCIBLE data
+ * (`forge:v1`) is migrated on first load: GPS runs and manual loop logs both
+ * become Activities, so no history is lost.
  */
 import { useCallback, useEffect, useState } from 'react';
+import type { LatLng } from './run';
 
-export const STORAGE_KEY = 'forge:v1';
+export const STORAGE_KEY = 'runner:v1';
+const LEGACY_KEY = 'forge:v1';
 
-export interface RunEntry {
+export interface Split {
+  miles: number;   // usually 1.0; the final split may be partial (e.g. 0.4)
+  seconds: number; // time spent in this split
+}
+
+export interface Activity {
   id: string;
-  date: string;        // ISO date string (yyyy-mm-dd)
-  seconds: number;     // total moving time for the 3.2mi loop
-  breaks: number;      // number of walk breaks taken
-  runFirst: boolean;   // did the "run first" rule hold this session
-  note: string;
-}
-
-export interface NodeLog {
-  date: string;        // ISO date
-  value: number;       // reps (best set) or hold seconds (best hold)
-}
-
-export interface NodeState {
-  logs: NodeLog[];
-  mastered: boolean;
-  masteredDate?: string;
-}
-
-export type SessionType = 'run' | 'cal';
-
-export interface SessionEntry {
-  id: string;
-  date: string;        // ISO date
-  type: SessionType;
-}
-
-/** A free-form GPS-tracked run (any route/distance), separate from the
- *  fixed Rockland Lake loop log. Route is a decimated [lat,lng] polyline. */
-export interface GpsRun {
-  id: string;
-  date: string;        // ISO date
+  date: string;        // ISO datetime of when the run started
+  name: string;
   seconds: number;     // moving time
-  miles: number;       // GPS distance
-  route: [number, number][];
+  miles: number;
+  route: LatLng[];     // empty for manual entries
+  splits: Split[];     // empty for manual entries
+  source: 'gps' | 'manual';
   note: string;
 }
 
-export interface ForgeData {
-  runs: RunEntry[];
-  gpsRuns: GpsRun[];
-  cal: {
-    nodes: Record<string, NodeState>;
-    maxes: { pullups: number; dips: number; pushups: number };
-  };
-  sessions: SessionEntry[];
+export interface RunnerData {
+  activities: Activity[];
   settings: {
+    name: string;
+    weightLbs: number;
+    weeklyGoalMiles: number;
     runBpm: number;
     walkBpm: number;
-    weightLbs: number;
-    name: string;
   };
 }
 
-// ---- seed data ---------------------------------------------------------
-
-// Run history so the chart isn't empty. Listed oldest -> newest.
-// 36:50 was the old PR; 32:00 is the current PR.
-const SEED_RUN_SECONDS = [
-  { s: 37 * 60 + 0, note: 'First timed loop' },
-  { s: 38 * 60 + 28, note: 'Humid, legs flat' },
-  { s: 40 * 60 + 0, note: 'Easy Z2 day' },
-  { s: 36 * 60 + 50, note: 'New PR! Felt strong' },
-  { s: 37 * 60 + 30, note: 'Windy back half' },
-  { s: 37 * 60 + 0, note: 'Steady' },
-  { s: 39 * 60 + 18, note: 'Tired from skills day' },
-  { s: 32 * 60 + 0, note: 'Current PR — attacked it' }
-];
-
-function seedRuns(): RunEntry[] {
-  const today = new Date();
-  return SEED_RUN_SECONDS.map((r, i) => {
-    const d = new Date(today);
-    // space the seed runs roughly every 5 days going back in time
-    d.setDate(today.getDate() - (SEED_RUN_SECONDS.length - 1 - i) * 5);
-    return {
-      id: `seed-run-${i}`,
-      date: d.toISOString().slice(0, 10),
-      seconds: r.s,
-      breaks: i < 5 ? 2 : 0,
-      runFirst: true,
-      note: r.note
-    };
-  });
-}
-
-function seedSessionsFromRuns(runs: RunEntry[]): SessionEntry[] {
-  return runs.map((r) => ({ id: `sess-${r.id}`, date: r.date, type: 'run' as const }));
-}
-
-export function defaultData(): ForgeData {
-  const runs = seedRuns();
+export function defaultData(): RunnerData {
   return {
-    runs,
-    gpsRuns: [],
-    cal: {
-      nodes: {},
-      maxes: { pullups: 9, dips: 12, pushups: 25 }
-    },
-    sessions: seedSessionsFromRuns(runs),
-    settings: { runBpm: 170, walkBpm: 120, weightLbs: 175, name: 'Kev' }
+    activities: [],
+    settings: { name: 'Runner', weightLbs: 175, weeklyGoalMiles: 10, runBpm: 170, walkBpm: 120 }
   };
 }
 
-// ---- load / save -------------------------------------------------------
+// ---- legacy migration ----------------------------------------------------
 
-export function loadData(): ForgeData {
+interface LegacyGpsRun { id: string; date: string; seconds: number; miles: number; route: LatLng[]; note: string }
+interface LegacyRun { id: string; date: string; seconds: number; note: string }
+interface LegacyData {
+  runs?: LegacyRun[];
+  gpsRuns?: LegacyGpsRun[];
+  settings?: { runBpm?: number; walkBpm?: number; weightLbs?: number; name?: string };
+}
+
+function migrateLegacy(): RunnerData | null {
+  try {
+    const raw = localStorage.getItem(LEGACY_KEY);
+    if (!raw) return null;
+    const old = JSON.parse(raw) as LegacyData;
+    const base = defaultData();
+    const activities: Activity[] = [];
+    for (const r of old.runs ?? []) {
+      if (r.id.startsWith('seed-')) continue; // drop demo seed data
+      activities.push({
+        id: `mig-${r.id}`, date: `${r.date}T12:00:00`, name: 'Loop Run',
+        seconds: r.seconds, miles: 3.2, route: [], splits: [], source: 'manual', note: r.note ?? ''
+      });
+    }
+    for (const g of old.gpsRuns ?? []) {
+      activities.push({
+        id: `mig-${g.id}`, date: `${g.date}T12:00:00`, name: 'Run',
+        seconds: g.seconds, miles: g.miles, route: g.route ?? [], splits: [], source: 'gps', note: g.note ?? ''
+      });
+    }
+    activities.sort((a, b) => a.date.localeCompare(b.date));
+    return {
+      activities,
+      settings: {
+        ...base.settings,
+        name: old.settings?.name ?? base.settings.name,
+        weightLbs: old.settings?.weightLbs ?? base.settings.weightLbs,
+        runBpm: old.settings?.runBpm ?? base.settings.runBpm,
+        walkBpm: old.settings?.walkBpm ?? base.settings.walkBpm
+      }
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ---- load / save -----------------------------------------------------------
+
+export function loadData(): RunnerData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultData();
-    const parsed = JSON.parse(raw) as Partial<ForgeData>;
+    if (!raw) {
+      const migrated = migrateLegacy();
+      if (migrated) {
+        saveData(migrated);
+        return migrated;
+      }
+      return defaultData();
+    }
+    const parsed = JSON.parse(raw) as Partial<RunnerData>;
     const base = defaultData();
-    // shallow-merge with defaults so new fields don't blow up old saves
     return {
-      runs: parsed.runs ?? base.runs,
-      gpsRuns: parsed.gpsRuns ?? base.gpsRuns,
-      cal: {
-        nodes: parsed.cal?.nodes ?? base.cal.nodes,
-        maxes: { ...base.cal.maxes, ...(parsed.cal?.maxes ?? {}) }
-      },
-      sessions: parsed.sessions ?? base.sessions,
+      activities: parsed.activities ?? base.activities,
       settings: { ...base.settings, ...(parsed.settings ?? {}) }
     };
   } catch {
@@ -137,7 +115,7 @@ export function loadData(): ForgeData {
   }
 }
 
-export function saveData(data: ForgeData) {
+export function saveData(data: RunnerData) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
@@ -145,28 +123,28 @@ export function saveData(data: ForgeData) {
   }
 }
 
-// ---- React hook (single source of truth, kept in sync across tabs) -----
+// ---- React hook (single in-memory source of truth) -------------------------
 
-let listeners: Array<(d: ForgeData) => void> = [];
-let memory: ForgeData | null = null;
+let listeners: Array<(d: RunnerData) => void> = [];
+let memory: RunnerData | null = null;
 
-function getMemory(): ForgeData {
+function getMemory(): RunnerData {
   if (!memory) memory = loadData();
   return memory;
 }
 
-export function useForge() {
-  const [data, setData] = useState<ForgeData>(getMemory);
+export function useStore() {
+  const [data, setData] = useState<RunnerData>(getMemory);
 
   useEffect(() => {
-    const fn = (d: ForgeData) => setData(d);
+    const fn = (d: RunnerData) => setData(d);
     listeners.push(fn);
     return () => {
       listeners = listeners.filter((l) => l !== fn);
     };
   }, []);
 
-  const update = useCallback((mut: (d: ForgeData) => ForgeData) => {
+  const update = useCallback((mut: (d: RunnerData) => RunnerData) => {
     const next = mut(structuredClone(getMemory()));
     memory = next;
     saveData(next);
@@ -176,7 +154,16 @@ export function useForge() {
   return { data, update };
 }
 
-// ---- helpers -----------------------------------------------------------
+/** Imperative add — used by the tracker store, which lives outside React. */
+export function addActivity(a: Activity) {
+  const next = structuredClone(getMemory());
+  next.activities.push(a);
+  memory = next;
+  saveData(next);
+  listeners.forEach((l) => l(next));
+}
+
+// ---- helpers ---------------------------------------------------------------
 
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -186,38 +173,92 @@ export function uid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-/** Mark a session for the unified streak. Idempotent per day+type so that
- *  several logs within one workout count as a single session. */
-export function withSession(d: ForgeData, type: SessionType, date = todayISO()): ForgeData {
-  const exists = d.sessions.some((s) => s.date === date && s.type === type);
-  if (!exists) d.sessions.push({ id: uid(), date, type });
-  return d;
+function localDay(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 }
 
-/** Consecutive-day streak ending today (or yesterday if nothing logged today). */
-export function computeStreak(sessions: SessionEntry[]): number {
-  if (sessions.length === 0) return 0;
-  const days = new Set(sessions.map((s) => s.date));
-  let streak = 0;
-  const cursor = new Date();
-  // allow the streak to be "alive" if today has nothing yet but yesterday does
-  if (!days.has(cursor.toISOString().slice(0, 10))) {
-    cursor.setDate(cursor.getDate() - 1);
-    if (!days.has(cursor.toISOString().slice(0, 10))) return 0;
+function mondayOf(d: Date): Date {
+  const m = new Date(d);
+  m.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  m.setHours(0, 0, 0, 0);
+  return m;
+}
+
+/** Distance / time / run count for the week containing `now` (Mon–Sun). */
+export function weekStats(activities: Activity[], now = new Date()) {
+  const start = mondayOf(now);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  const inWeek = activities.filter((a) => {
+    const d = new Date(a.date);
+    return d >= start && d < end;
+  });
+  return {
+    runs: inWeek.length,
+    miles: inWeek.reduce((s, a) => s + a.miles, 0),
+    seconds: inWeek.reduce((s, a) => s + a.seconds, 0)
+  };
+}
+
+/** Last `n` weeks of mileage (oldest first) for the profile chart. */
+export function weeklyMileage(activities: Activity[], n = 8, now = new Date()) {
+  const thisMonday = mondayOf(now);
+  const weeks: { label: string; miles: number }[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const start = new Date(thisMonday);
+    start.setDate(thisMonday.getDate() - i * 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7);
+    const miles = activities
+      .filter((a) => {
+        const d = new Date(a.date);
+        return d >= start && d < end;
+      })
+      .reduce((s, a) => s + a.miles, 0);
+    const label = i === 0 ? 'Now' : start.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
+    weeks.push({ label, miles: +miles.toFixed(1) });
   }
-  while (days.has(cursor.toISOString().slice(0, 10))) {
+  return weeks;
+}
+
+/** Consecutive-day run streak ending today (or yesterday). */
+export function computeStreak(activities: Activity[]): number {
+  if (activities.length === 0) return 0;
+  const days = new Set(activities.map((a) => localDay(a.date)));
+  const cursor = new Date();
+  const key = () => localDay(cursor.toISOString());
+  let streak = 0;
+  if (!days.has(localDay(new Date().toISOString()))) {
+    cursor.setDate(cursor.getDate() - 1);
+    if (!days.has(key())) return 0;
+  }
+  while (days.has(localDay(cursor.toISOString()))) {
     streak++;
     cursor.setDate(cursor.getDate() - 1);
   }
   return streak;
 }
 
-/** Count of sessions in the current week (Mon-Sun). */
-export function sessionsThisWeek(sessions: SessionEntry[]): number {
-  const now = new Date();
-  const day = (now.getDay() + 6) % 7; // 0 = Monday
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - day);
-  monday.setHours(0, 0, 0, 0);
-  return sessions.filter((s) => new Date(s.date) >= monday).length;
+/** All-time totals + best efforts, Strava-style. */
+export function bestEfforts(activities: Activity[]) {
+  const totalMiles = activities.reduce((s, a) => s + a.miles, 0);
+  const totalSeconds = activities.reduce((s, a) => s + a.seconds, 0);
+
+  let longest: Activity | null = null;
+  let fastestPace: Activity | null = null; // best avg pace, runs >= 1 mi
+  let fastestMileSec: number | null = null; // fastest full-mile split
+
+  for (const a of activities) {
+    if (!longest || a.miles > longest.miles) longest = a;
+    if (a.miles >= 1) {
+      if (!fastestPace || a.seconds / a.miles < fastestPace.seconds / fastestPace.miles) fastestPace = a;
+    }
+    for (const s of a.splits) {
+      if (s.miles >= 0.995 && (fastestMileSec === null || s.seconds < fastestMileSec)) {
+        fastestMileSec = s.seconds;
+      }
+    }
+  }
+  return { totalMiles, totalSeconds, count: activities.length, longest, fastestPace, fastestMileSec };
 }

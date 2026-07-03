@@ -1,7 +1,7 @@
-/* INVINCIBLE service worker — offline app shell.
+/* RUNNER service worker — offline app shell.
    Network-first for navigations (so updates land), cache-first for static
    assets. Bump CACHE to invalidate after a deploy. */
-const CACHE = 'invincible-v1';
+const CACHE = 'runner-v1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

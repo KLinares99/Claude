@@ -1,5 +1,6 @@
-// Generates INVINCIBLE PWA icons (PNG) with no external deps — built-in zlib.
-// A bold serif "I" lettermark in the iconic Invincible blue + yellow.
+// Generates RUNNER PWA icons (PNG) with no external deps — built-in zlib.
+// Brand-orange rounded tile with a white ascending route line + endpoint dot,
+// matching src/components/Logo.tsx.
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
@@ -44,27 +45,33 @@ function png(width, height, rgba) {
   return Buffer.concat([sig, chunk('IHDR', ihdr), chunk('IDAT', idat), chunk('IEND', Buffer.alloc(0))]);
 }
 
-function lerp(a, b, t) { return a + (b - a) * t; }
-function mix(c1, c2, t) { return [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)]; }
+const ORANGE = [252, 76, 2]; // #FC4C02
+const WHITE = [255, 255, 255];
 
-// Iconic Invincible costume colors
-const BLUE_TOP = [42, 95, 192];    // brighter suit blue
-const BLUE_BOT = [16, 38, 96];     // deep navy
-const YELLOW_TOP = [255, 224, 56]; // #ffe038
-const YELLOW_BOT = [245, 184, 0];  // #f5b800
+// route path in normalized [0,1] coords (matches Logo.tsx: 12,33 21,24 27,30 36,15 / 48)
+const PATH = [
+  [12 / 48, 33 / 48],
+  [21 / 48, 24 / 48],
+  [27 / 48, 30 / 48],
+  [36 / 48, 15 / 48]
+];
+const DOT = PATH[PATH.length - 1];
 
-// Bold serif "I": stem + top/bottom serif bars.
-function isLetterI(nx, ny) {
-  // nx, ny in [0,1]
-  const inStem = nx >= 0.405 && nx <= 0.595 && ny >= 0.24 && ny <= 0.76;
-  const inTop = nx >= 0.28 && nx <= 0.72 && ny >= 0.22 && ny <= 0.325;
-  const inBot = nx >= 0.28 && nx <= 0.72 && ny >= 0.675 && ny <= 0.78;
-  return inStem || inTop || inBot;
+function distToSegment(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 === 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const cx = ax + t * dx, cy = ay + t * dy;
+  return Math.hypot(px - cx, py - cy);
 }
 
 function render(size) {
   const buf = Buffer.alloc(size * size * 4);
-  const radius = size * 0.22;
+  const radius = size * 0.24;
+  const strokeR = size * (2.25 / 48); // half of the 4.5 stroke width
+  const dotR = size * (3.4 / 48);
+
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const i = (y * size + x) * 4;
@@ -74,16 +81,28 @@ function render(size) {
       const ry = Math.min(y, size - 1 - y);
       if (rx < radius && ry < radius) {
         const dx = radius - rx, dy = radius - ry;
-        if (dx * dx + dy * dy > radius * radius) a = 0;
+        const d = Math.sqrt(dx * dx + dy * dy) - radius;
+        a = d <= -0.8 ? 255 : d >= 0.8 ? 0 : Math.round(255 * (0.5 - d / 1.6));
       }
-      const t = y / size;
-      let [r, g, b] = mix(BLUE_TOP, BLUE_BOT, t);
-      const nx = x / size;
-      const ny = y / size;
-      if (isLetterI(nx, ny)) {
-        [r, g, b] = mix(YELLOW_TOP, YELLOW_BOT, ny);
+
+      // white mark: min distance to any path segment (round caps/joins for free)
+      let dist = Infinity;
+      for (let s = 0; s < PATH.length - 1; s++) {
+        dist = Math.min(dist, distToSegment(
+          x + 0.5, y + 0.5,
+          PATH[s][0] * size, PATH[s][1] * size,
+          PATH[s + 1][0] * size, PATH[s + 1][1] * size
+        ));
       }
-      buf[i] = Math.round(r); buf[i + 1] = Math.round(g); buf[i + 2] = Math.round(b); buf[i + 3] = a;
+      const dDot = Math.hypot(x + 0.5 - DOT[0] * size, y + 0.5 - DOT[1] * size);
+      const edge = Math.min(dist - strokeR, dDot - dotR);
+      // anti-aliased blend of white mark over orange
+      const t = edge <= -0.8 ? 1 : edge >= 0.8 ? 0 : 0.5 - edge / 1.6;
+
+      buf[i] = Math.round(ORANGE[0] + (WHITE[0] - ORANGE[0]) * t);
+      buf[i + 1] = Math.round(ORANGE[1] + (WHITE[1] - ORANGE[1]) * t);
+      buf[i + 2] = Math.round(ORANGE[2] + (WHITE[2] - ORANGE[2]) * t);
+      buf[i + 3] = a;
     }
   }
   return png(size, size, buf);
