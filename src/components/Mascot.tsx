@@ -17,7 +17,7 @@ export type MascotPose = 'coach' | 'wave' | 'love';
 const SRC: Record<MascotPose, string> = {
   coach: 'https://d8j0ntlcm91z4.cloudfront.net/user_3ASOSuQ2tddjxNl9PgtieUhFQWH/hf_20260704_043141_27560f03-ac58-4d7f-93f6-5563ca462a46.png',
   wave: 'https://d8j0ntlcm91z4.cloudfront.net/user_3ASOSuQ2tddjxNl9PgtieUhFQWH/hf_20260704_043150_93a92010-a55e-452d-9b96-51a91fe05239.png',
-  love: 'https://d8j0ntlcm91z4.cloudfront.net/user_3ASOSuQ2tddjxNl9PgtieUhFQWH/hf_20260704_044124_97ab2b2e-28fc-4603-8fac-2519b8f22edb.png'
+  love: 'https://d8j0ntlcm91z4.cloudfront.net/user_3ASOSuQ2tddjxNl9PgtieUhFQWH/hf_20260704_044325_3a6ccda3-ecc9-41d8-b180-e4925cd8b9bc.png'
 };
 
 export default function Mascot({
