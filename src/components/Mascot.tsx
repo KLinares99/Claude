@@ -8,14 +8,16 @@ import { useState } from 'react';
  * mascot fully offline/permanent later, drop the PNGs in public/mascot/ and
  * point these URLs at `${import.meta.env.BASE_URL}mascot/<pose>.png`.
  *
- *  - coach: standing, thumbs-up   → workout finish + Home dashboard
- *  - wave:  mid-stride, wing up    → daily quote
+ *  - coach: standing, thumbs-up    → workout finish + Home dashboard
+ *  - wave:  mid-stride, wing up     → daily quote
+ *  - love:  portrait, heart eyes    → kudos celebration
  */
-export type MascotPose = 'coach' | 'wave';
+export type MascotPose = 'coach' | 'wave' | 'love';
 
 const SRC: Record<MascotPose, string> = {
   coach: 'https://d8j0ntlcm91z4.cloudfront.net/user_3ASOSuQ2tddjxNl9PgtieUhFQWH/hf_20260704_043141_27560f03-ac58-4d7f-93f6-5563ca462a46.png',
-  wave: 'https://d8j0ntlcm91z4.cloudfront.net/user_3ASOSuQ2tddjxNl9PgtieUhFQWH/hf_20260704_043150_93a92010-a55e-452d-9b96-51a91fe05239.png'
+  wave: 'https://d8j0ntlcm91z4.cloudfront.net/user_3ASOSuQ2tddjxNl9PgtieUhFQWH/hf_20260704_043150_93a92010-a55e-452d-9b96-51a91fe05239.png',
+  love: 'https://d8j0ntlcm91z4.cloudfront.net/user_3ASOSuQ2tddjxNl9PgtieUhFQWH/hf_20260704_044124_97ab2b2e-28fc-4603-8fac-2519b8f22edb.png'
 };
 
 export default function Mascot({

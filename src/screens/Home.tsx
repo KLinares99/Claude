@@ -20,6 +20,7 @@ export default function Home() {
   const sync = useSyncExternalStore(syncSubscribe, syncGet);
   const [open, setOpen] = useState<{ id: string; partner: boolean } | null>(null);
   const [logging, setLogging] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
 
   const myId = sync.session?.user.id ?? '';
   const feed = useMemo<FeedItem[]>(() => {
@@ -135,7 +136,15 @@ export default function Home() {
               hearts={hearts.length}
               iHearted={!!myId && hearts.includes(myId)}
               canHeart={!!myId && !!sync.partnerId}
-              onHeart={() => item.ownerId && toggleKudos(item.ownerId, item.a.id)}
+              onHeart={() => {
+                if (!item.ownerId) return;
+                // celebrate only when giving kudos, not taking it back
+                if (!(myId && hearts.includes(myId))) {
+                  setCelebrate(true);
+                  window.setTimeout(() => setCelebrate(false), 1400);
+                }
+                toggleKudos(item.ownerId, item.a.id);
+              }}
               onOpen={() => setOpen({ id: item.a.id, partner: item.isPartner })}
             />
           );
@@ -145,6 +154,14 @@ export default function Home() {
 
       {/* overlays live outside the space-y container so its sibling
           margins can't offset their fixed positioning */}
+      {celebrate && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center pointer-events-none">
+          <div className="kudos-pop">
+            <Mascot pose="love" size={200} fallback={<span className="text-7xl">🥰</span>} />
+          </div>
+        </div>
+      )}
+
       {openItem && (
         <ActivityDetail activity={openItem} readOnly={open?.partner} onClose={() => setOpen(null)} />
       )}

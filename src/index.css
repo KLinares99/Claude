@@ -74,3 +74,16 @@
 .rec-dot {
   animation: rec-pulse 1.4s ease-in-out infinite;
 }
+
+/* kudos celebration — Ptak pops in with hearts, then fades */
+@keyframes kudos-pop {
+  0% { transform: scale(0.4) rotate(-8deg); opacity: 0; }
+  25% { transform: scale(1.1) rotate(3deg); opacity: 1; }
+  40% { transform: scale(1) rotate(0deg); opacity: 1; }
+  80% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.9) translateY(-12px); opacity: 0; }
+}
+.kudos-pop {
+  animation: kudos-pop 1.4s ease-in-out forwards;
+  filter: drop-shadow(0 8px 24px rgba(22, 24, 29, 0.18));
+}
