@@ -1,24 +1,44 @@
-import { useMemo, useState } from 'react';
-import { Flame, Plus, ChevronRight } from 'lucide-react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
+import { Flame, Plus, ChevronRight, Heart } from 'lucide-react';
 import { useStore, weekStats, computeStreak, uid, type Activity } from '../lib/storage';
+import { syncSubscribe, syncGet, toggleKudos } from '../lib/sync';
 import { fmtClock, paceFor, fmtRelDate, defaultRunName } from '../lib/run';
 import RoutePreview from '../components/ui/RoutePreview';
 import ActivityDetail from './ActivityDetail';
 import { toast } from '../lib/toast';
 
+interface FeedItem {
+  a: Activity;
+  who: string;
+  ownerId: string;   // '' when not signed in
+  isPartner: boolean;
+}
+
 export default function Home() {
   const { data, update } = useStore();
-  const [openId, setOpenId] = useState<string | null>(null);
+  const sync = useSyncExternalStore(syncSubscribe, syncGet);
+  const [open, setOpen] = useState<{ id: string; partner: boolean } | null>(null);
   const [logging, setLogging] = useState(false);
 
-  const feed = useMemo(
-    () => [...data.activities].sort((a, b) => b.date.localeCompare(a.date)),
-    [data.activities]
-  );
+  const myId = sync.session?.user.id ?? '';
+  const feed = useMemo<FeedItem[]>(() => {
+    const mine: FeedItem[] = data.activities.map((a) => ({
+      a, who: data.settings.name, ownerId: myId, isPartner: false
+    }));
+    const theirs: FeedItem[] = sync.partnerActivities.map((a) => ({
+      a, who: a.ownerName, ownerId: a.ownerId, isPartner: true
+    }));
+    return [...mine, ...theirs].sort((x, y) => y.a.date.localeCompare(x.a.date));
+  }, [data.activities, data.settings.name, sync.partnerActivities, myId]);
+
   const week = weekStats(data.activities);
   const streak = computeStreak(data.activities);
   const goal = data.settings.weeklyGoalMiles;
-  const open = openId ? data.activities.find((a) => a.id === openId) : null;
+  const openItem = open
+    ? open.partner
+      ? sync.partnerActivities.find((a) => a.id === open.id)
+      : data.activities.find((a) => a.id === open.id)
+    : null;
 
   return (
     <>
@@ -67,13 +87,31 @@ export default function Home() {
           <p className="text-sm text-dim mt-1">Hit Record below to track your first run with GPS.</p>
         </div>
       ) : (
-        feed.map((a) => <ActivityCard key={a.id} a={a} who={data.settings.name} onOpen={() => setOpenId(a.id)} />)
+        feed.map((item) => {
+          const key = `${item.ownerId}:${item.a.id}`;
+          const hearts = sync.kudos[key] ?? [];
+          return (
+            <ActivityCard
+              key={`${item.isPartner ? 'p' : 'm'}-${item.a.id}`}
+              a={item.a}
+              who={item.who}
+              isPartner={item.isPartner}
+              hearts={hearts.length}
+              iHearted={!!myId && hearts.includes(myId)}
+              canHeart={!!myId && !!sync.partnerId}
+              onHeart={() => item.ownerId && toggleKudos(item.ownerId, item.a.id)}
+              onOpen={() => setOpen({ id: item.a.id, partner: item.isPartner })}
+            />
+          );
+        })
       )}
     </div>
 
       {/* overlays live outside the space-y container so its sibling
           margins can't offset their fixed positioning */}
-      {open && <ActivityDetail activity={open} onClose={() => setOpenId(null)} />}
+      {openItem && (
+        <ActivityDetail activity={openItem} readOnly={open?.partner} onClose={() => setOpen(null)} />
+      )}
 
       {logging && (
         <ManualLogSheet
@@ -104,13 +142,28 @@ function WeekStat({ label, value, unit }: { label: string; value: string; unit?:
   );
 }
 
-function ActivityCard({ a, who, onOpen }: { a: Activity; who: string; onOpen: () => void }) {
+function ActivityCard({
+  a, who, isPartner, hearts, iHearted, canHeart, onHeart, onOpen
+}: {
+  a: Activity;
+  who: string;
+  isPartner: boolean;
+  hearts: number;
+  iHearted: boolean;
+  canHeart: boolean;
+  onHeart: () => void;
+  onOpen: () => void;
+}) {
   return (
     <button className="card w-full text-left overflow-hidden" onClick={onOpen}>
       <div className="p-4 pb-3">
         <div className="flex items-center gap-2.5">
-          <span className="w-9 h-9 rounded-full bg-brand text-white font-black flex items-center justify-center text-sm">
-            {who.slice(0, 1).toUpperCase()}
+          <span
+            className={`w-9 h-9 rounded-full font-black flex items-center justify-center text-sm ${
+              isPartner ? 'bg-ink text-white' : 'bg-brand text-white'
+            }`}
+          >
+            {who.slice(0, 1).toUpperCase() || 'R'}
           </span>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold truncate">{who}</div>
@@ -126,8 +179,26 @@ function ActivityCard({ a, who, onOpen }: { a: Activity; who: string; onOpen: ()
         </div>
       </div>
       {a.route.length > 1 && (
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-3">
           <RoutePreview route={a.route} />
+        </div>
+      )}
+      {canHeart && (
+        <div className="px-4 pb-3 flex items-center gap-2">
+          <span
+            role="button"
+            aria-label={iHearted ? 'Remove kudos' : 'Give kudos'}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold border ${
+              iHearted ? 'border-brand bg-brand-soft text-brand' : 'border-line text-dim hover:text-brand'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onHeart();
+            }}
+          >
+            <Heart size={14} fill={iHearted ? 'currentColor' : 'none'} />
+            {hearts > 0 ? hearts : 'Kudos'}
+          </span>
         </div>
       )}
     </button>

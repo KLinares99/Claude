@@ -135,11 +135,37 @@ export function saveData(data: RunnerData) {
 // ---- React hook (single in-memory source of truth) -------------------------
 
 let listeners: Array<(d: RunnerData) => void> = [];
+let changeHooks: Array<() => void> = [];
 let memory: RunnerData | null = null;
 
 function getMemory(): RunnerData {
   if (!memory) memory = loadData();
   return memory;
+}
+
+/** Read-only snapshot for non-React modules (the sync engine). */
+export function getData(): RunnerData {
+  return getMemory();
+}
+
+/** Fires after any store write — used by the sync engine to schedule a push. */
+export function onStoreChange(fn: () => void): () => void {
+  changeHooks.push(fn);
+  return () => {
+    changeHooks = changeHooks.filter((f) => f !== fn);
+  };
+}
+
+function commit(next: RunnerData) {
+  memory = next;
+  saveData(next);
+  listeners.forEach((l) => l(next));
+  changeHooks.forEach((h) => h());
+}
+
+/** Imperative store mutation for non-React modules. */
+export function mutateStore(mut: (d: RunnerData) => RunnerData) {
+  commit(mut(structuredClone(getMemory())));
 }
 
 export function useStore() {
@@ -154,10 +180,7 @@ export function useStore() {
   }, []);
 
   const update = useCallback((mut: (d: RunnerData) => RunnerData) => {
-    const next = mut(structuredClone(getMemory()));
-    memory = next;
-    saveData(next);
-    listeners.forEach((l) => l(next));
+    commit(mut(structuredClone(getMemory())));
   }, []);
 
   return { data, update };
@@ -165,11 +188,10 @@ export function useStore() {
 
 /** Imperative add — used by the tracker store, which lives outside React. */
 export function addActivity(a: Activity) {
-  const next = structuredClone(getMemory());
-  next.activities.push(a);
-  memory = next;
-  saveData(next);
-  listeners.forEach((l) => l(next));
+  mutateStore((d) => {
+    d.activities.push(a);
+    return d;
+  });
 }
 
 // ---- helpers ---------------------------------------------------------------

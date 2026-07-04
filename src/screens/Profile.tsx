@@ -6,6 +6,7 @@ import {
 } from '../lib/storage';
 import { fmtClock, fmtTime, paceFor } from '../lib/run';
 import { toast } from '../lib/toast';
+import CoupleSync from './CoupleSync';
 
 export default function Profile() {
   const { data, update } = useStore();
@@ -121,6 +122,8 @@ export default function Profile() {
           />
         </div>
       </div>
+
+      <CoupleSync />
 
       {/* settings */}
       <div className="card-pad space-y-3">

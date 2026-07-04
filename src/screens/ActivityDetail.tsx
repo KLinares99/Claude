@@ -3,12 +3,16 @@ import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { X, Trash2, Pencil, Check, Share2 } from 'lucide-react';
 import { useStore, type Activity } from '../lib/storage';
+import { deleteRemoteActivity } from '../lib/sync';
 import { fmtClock, paceFor, fmtRelDate, caloriesFor } from '../lib/run';
 import { toast } from '../lib/toast';
 import ShareCard from './ShareCard';
 
-/** Full-screen activity page — map, stats, mile splits, rename, delete. */
-export default function ActivityDetail({ activity, onClose }: { activity: Activity; onClose: () => void }) {
+/** Full-screen activity page — map, stats, mile splits, rename, delete.
+ *  readOnly = a partner's activity from the shared feed (view + share only). */
+export default function ActivityDetail({
+  activity, onClose, readOnly = false
+}: { activity: Activity; onClose: () => void; readOnly?: boolean }) {
   const { data, update } = useStore();
   const [editing, setEditing] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -56,6 +60,7 @@ export default function ActivityDetail({ activity, onClose }: { activity: Activi
   const del = () => {
     if (!confirm('Delete this activity? This cannot be undone.')) return;
     update((d) => ({ ...d, activities: d.activities.filter((x) => x.id !== activity.id) }));
+    void deleteRemoteActivity(activity.id);
     toast('Activity deleted');
     onClose();
   };
@@ -78,9 +83,11 @@ export default function ActivityDetail({ activity, onClose }: { activity: Activi
             <button onClick={() => setSharing(true)} className="p-1 text-dim hover:text-brand" aria-label="Share">
               <Share2 size={20} />
             </button>
-            <button onClick={del} className="p-1 -mr-1 text-dim hover:text-bad" aria-label="Delete">
-              <Trash2 size={20} />
-            </button>
+            {!readOnly && (
+              <button onClick={del} className="p-1 -mr-1 text-dim hover:text-bad" aria-label="Delete">
+                <Trash2 size={20} />
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -102,9 +109,11 @@ export default function ActivityDetail({ activity, onClose }: { activity: Activi
           ) : (
             <>
               <h1 className="text-2xl font-black flex-1">{activity.name}</h1>
-              <button className="text-dim hover:text-ink p-1" onClick={() => setEditing(true)} aria-label="Rename">
-                <Pencil size={18} />
-              </button>
+              {!readOnly && (
+                <button className="text-dim hover:text-ink p-1" onClick={() => setEditing(true)} aria-label="Rename">
+                  <Pencil size={18} />
+                </button>
+              )}
             </>
           )}
         </div>

@@ -60,6 +60,28 @@ the timer, the route or the map. On top of that:
   settings: { name, weightLbs, weeklyGoalMiles, runBpm, walkBpm } }
 ```
 
+## Couple sync (optional server)
+The shared feed is powered by a free Supabase project you own. Runs sync to
+it (cross-device backup) and a linked partner sees your runs — with kudos —
+on their Home feed. Nutrition data never syncs; it stays on each device.
+
+One-time setup (~5 minutes, one of you does it):
+1. Create a free project at **supabase.com** (any name/region).
+2. In the dashboard, open **SQL Editor → New query**, paste the entire
+   contents of [`supabase/schema.sql`](supabase/schema.sql), and Run.
+3. In **Authentication → Sign In / Providers → Email**, turn OFF
+   "Confirm email" so phone signups are instant.
+4. In **Project Settings → API**, copy the **Project URL** and the
+   **anon public** key.
+5. In the app, go to **You → Couple sync**, paste both values, create your
+   accounts (one each), then one of you enters the other's 6-character
+   invite code. Done — the feed is shared.
+
+The anon key is safe to share between your two phones (it's public by
+design); row-level security in the schema is what keeps each account's
+writes to itself. To skip the paste step entirely, bake the two values into
+`DEFAULTS` in `src/lib/sync.ts` and redeploy.
+
 ## Develop
 ```bash
 npm install
