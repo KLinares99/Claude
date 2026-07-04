@@ -9,6 +9,7 @@ import {
 } from '../lib/tracker';
 import { useStore } from '../lib/storage';
 import { toast } from '../lib/toast';
+import Mascot from '../components/Mascot';
 import Intervals from './Intervals';
 
 const DEFAULT_CENTER: LatLng = [41.1506, -73.9495];
@@ -242,7 +243,13 @@ function SaveSheet({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="w-10 h-1 rounded-full bg-line mx-auto sm:hidden" />
-        <h2 className="text-lg font-black">Save run</h2>
+        <div className="flex items-center gap-3">
+          <Mascot pose="coach" size={56} fallback={<span className="text-3xl">🦜</span>} />
+          <div>
+            <h2 className="text-lg font-black leading-tight">Nice run!</h2>
+            <p className="text-xs text-dim">Ptak's proud — name it and save.</p>
+          </div>
+        </div>
         <input className="input w-full text-base font-semibold" value={name} onChange={(e) => setName(e.target.value)} placeholder="Run name" />
         <div className="grid grid-cols-3 gap-2">
           <SheetStat label="Distance" value={`${miles.toFixed(2)} mi`} />

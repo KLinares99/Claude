@@ -98,6 +98,14 @@ export default function Home() {
             />
           </div>
         </div>
+
+        {/* Ptak's weekly nudge */}
+        {week.runs > 0 && (
+          <div className="mt-3 pt-3 border-t border-line flex items-center gap-3">
+            <Mascot pose="coach" size={44} fallback={<span className="text-2xl">🦜</span>} />
+            <p className="text-sm font-semibold flex-1">{weeklyNudge(week.miles, goal, week.runs)}</p>
+          </div>
+        )}
       </div>
 
       {/* feed */}
@@ -156,6 +164,15 @@ export default function Home() {
       )}
     </>
   );
+}
+
+/** Short encouragement from Ptak based on the week's progress. */
+function weeklyNudge(miles: number, goal: number, runs: number): string {
+  if (goal > 0 && miles >= goal) return `Weekly goal smashed — ${miles.toFixed(1)} mi! 🎉`;
+  if (goal > 0 && miles >= goal * 0.7) return `Almost there — ${(goal - miles).toFixed(1)} mi to your goal!`;
+  if (runs >= 3) return `${runs} runs this week — you're on a roll!`;
+  if (runs === 2) return 'Two runs down. Keep the rhythm going!';
+  return 'Great start this week — lace up again soon!';
 }
 
 function WeekStat({ label, value, unit }: { label: string; value: string; unit?: string }) {

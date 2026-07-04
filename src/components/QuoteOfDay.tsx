@@ -40,7 +40,7 @@ export default function QuoteOfDay() {
           </button>
         </div>
         <div className="mx-auto w-fit">
-          <Mascot pose="coach" size={112} fallback={<Logo size={44} />} />
+          <Mascot pose="wave" size={112} fallback={<Logo size={44} />} />
         </div>
         <p className="text-lg font-bold leading-snug">“{q.text}”</p>
         {q.by && <p className="text-sm text-dim">— {q.by}</p>}
