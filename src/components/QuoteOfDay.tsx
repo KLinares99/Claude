@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import Logo from './Logo';
+import Mascot from './Mascot';
 import { quoteForToday } from '../data/quotes';
 import { localDateISO } from '../lib/nutrition';
 
@@ -33,12 +34,14 @@ export default function QuoteOfDay() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <span className="label">Today's boost</span>
+          <span className="label">Ptak's boost of the day</span>
           <button onClick={dismiss} className="text-dim hover:text-ink p-1 -mr-1" aria-label="Dismiss">
             <X size={20} />
           </button>
         </div>
-        <div className="mx-auto w-fit"><Logo size={40} /></div>
+        <div className="mx-auto w-fit">
+          <Mascot pose="coach" size={112} fallback={<Logo size={44} />} />
+        </div>
         <p className="text-lg font-bold leading-snug">“{q.text}”</p>
         {q.by && <p className="text-sm text-dim">— {q.by}</p>}
         <button className="btn-primary w-full py-3" onClick={dismiss}>Let's go</button>

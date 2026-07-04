@@ -37,13 +37,41 @@ export default function Profile() {
       try {
         const parsed = JSON.parse(String(reader.result)) as Partial<RunnerData>;
         if (!parsed || !Array.isArray(parsed.activities)) throw new Error('bad file');
-        if (!confirm('Restore this backup? It replaces your current data on this device.')) return;
-        update((d) => ({
-          activities: parsed.activities ?? d.activities,
-          nutrition: { ...d.nutrition, ...(parsed.nutrition ?? {}) },
-          settings: { ...d.settings, ...(parsed.settings ?? {}) }
-        }));
-        toast('Backup restored');
+
+        // Non-destructive merge: add runs from the file that aren't already
+        // here (dedupe by id), so importing can never lose current data and
+        // re-importing the same backup is a safe no-op.
+        const fresh = data.activities.length === 0 && !data.nutrition.profile;
+        let added = 0;
+        update((d) => {
+          const haveRun = new Set(d.activities.map((a) => a.id));
+          for (const a of parsed.activities ?? []) {
+            if (!haveRun.has(a.id)) {
+              d.activities.push(a);
+              haveRun.add(a.id);
+              added++;
+            }
+          }
+          d.activities.sort((a, b) => a.date.localeCompare(b.date));
+
+          const haveFood = new Set(d.nutrition.entries.map((e) => e.id));
+          for (const e of parsed.nutrition?.entries ?? []) {
+            if (!haveFood.has(e.id)) {
+              d.nutrition.entries.push(e);
+              haveFood.add(e.id);
+            }
+          }
+          // On a fresh/wiped device, fully restore profile + settings from the
+          // backup; on a device already in use, keep current settings.
+          if (fresh) {
+            if (parsed.nutrition?.profile) d.nutrition.profile = parsed.nutrition.profile;
+            if (parsed.settings) d.settings = { ...d.settings, ...parsed.settings };
+          } else {
+            d.nutrition.profile ??= parsed.nutrition?.profile ?? null;
+          }
+          return d;
+        });
+        toast(added > 0 ? `Imported ${added} run${added === 1 ? '' : 's'}` : 'Already up to date — nothing new to import');
       } catch {
         toast('Could not read that file');
       } finally {
@@ -157,7 +185,9 @@ export default function Profile() {
           <Shield size={18} className="text-good shrink-0 mt-0.5" />
           <p className="text-xs text-dim leading-relaxed">
             Everything is stored on <span className="text-ink font-semibold">this device</span> (browser local storage).
-            It isn't synced to the cloud — export a backup regularly so you never lose your history.
+            Export a backup anytime; <span className="text-ink font-semibold">Import merges runs in</span> (it adds
+            anything missing and never overwrites what's already here), so a saved file always brings your history back.
+            {' '}Couple sync below also keeps your runs backed up across devices.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2">

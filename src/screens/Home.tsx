@@ -1,9 +1,10 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
 import { Flame, Plus, ChevronRight, Heart } from 'lucide-react';
-import { useStore, weekStats, computeStreak, uid, type Activity } from '../lib/storage';
+import { useStore, weekStats, weekByDay, computeStreak, uid, type Activity } from '../lib/storage';
 import { syncSubscribe, syncGet, toggleKudos } from '../lib/sync';
 import { fmtClock, paceFor, fmtRelDate, defaultRunName } from '../lib/run';
 import RoutePreview from '../components/ui/RoutePreview';
+import Mascot from '../components/Mascot';
 import ActivityDetail from './ActivityDetail';
 import { toast } from '../lib/toast';
 
@@ -32,6 +33,8 @@ export default function Home() {
   }, [data.activities, data.settings.name, sync.partnerActivities, myId]);
 
   const week = weekStats(data.activities);
+  const days = weekByDay(data.activities);
+  const maxDayMiles = Math.max(...days.map((d) => d.miles), 1);
   const streak = computeStreak(data.activities);
   const goal = data.settings.weeklyGoalMiles;
   const openItem = open
@@ -58,7 +61,32 @@ export default function Home() {
           <WeekStat label="Time" value={fmtClock(week.seconds)} />
           <WeekStat label="Runs" value={`${week.runs}`} />
         </div>
-        <div className="mt-3">
+
+        {/* 7-day strip — per-day mileage, today highlighted */}
+        <div className="grid grid-cols-7 gap-1.5 mt-4">
+          {days.map((d, i) => (
+            <div key={i} className="flex flex-col items-center gap-1">
+              <div className="w-full h-16 rounded-lg bg-paper flex items-end overflow-hidden">
+                {d.miles > 0 && (
+                  <div
+                    className="w-full bg-brand rounded-lg transition-all"
+                    style={{ height: `${Math.max(14, (d.miles / maxDayMiles) * 100)}%` }}
+                    title={`${d.miles.toFixed(1)} mi`}
+                  />
+                )}
+              </div>
+              <span
+                className={`w-6 h-6 flex items-center justify-center rounded-full text-[11px] font-bold ${
+                  d.isToday ? 'bg-ink text-white' : d.isFuture ? 'text-faint' : 'text-dim'
+                }`}
+              >
+                {d.label}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4">
           <div className="flex justify-between text-[11px] text-dim mb-1 nums">
             <span>Weekly goal</span>
             <span>{week.miles.toFixed(1)} / {goal} mi</span>
@@ -81,10 +109,10 @@ export default function Home() {
       </div>
 
       {feed.length === 0 ? (
-        <div className="card-pad text-center py-10">
-          <div className="text-3xl mb-2">🏃</div>
+        <div className="card-pad text-center py-8">
+          <Mascot pose="coach" size={96} className="mx-auto mb-2" fallback={<div className="text-3xl mb-2">🦜</div>} />
           <p className="font-bold">No runs yet</p>
-          <p className="text-sm text-dim mt-1">Hit Record below to track your first run with GPS.</p>
+          <p className="text-sm text-dim mt-1">Hit Record below and Ptak will track your first run with GPS.</p>
         </div>
       ) : (
         feed.map((item) => {

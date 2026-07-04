@@ -232,6 +232,27 @@ export function weekStats(activities: Activity[], now = new Date()) {
   };
 }
 
+/** Per-day breakdown of the current week (Mon–Sun) for the Home dashboard. */
+export function weekByDay(activities: Activity[], now = new Date()) {
+  const start = mondayOf(now);
+  const todayKey = localDay(now.toISOString());
+  const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  return labels.map((label, i) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + i);
+    const key = localDay(day.toISOString());
+    const runs = activities.filter((a) => localDay(a.date) === key);
+    return {
+      label,
+      dateNum: day.getDate(),
+      miles: runs.reduce((s, a) => s + a.miles, 0),
+      runs: runs.length,
+      isToday: key === todayKey,
+      isFuture: day > now
+    };
+  });
+}
+
 /** Last `n` weeks of mileage (oldest first) for the profile chart. */
 export function weeklyMileage(activities: Activity[], n = 8, now = new Date()) {
   const thisMonday = mondayOf(now);
