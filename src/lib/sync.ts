@@ -15,7 +15,12 @@ import { createClient, type SupabaseClient, type Session } from '@supabase/supab
 import { getData, mutateStore, onStoreChange, type Activity } from './storage';
 
 // Fill these in to skip the paste-config step on every device:
-const DEFAULTS: { url: string; anonKey: string } | null = null;
+// Runner's Supabase project. The anon key is public by design — row-level
+// security in supabase/schema.sql is what protects each account's data.
+const DEFAULTS: { url: string; anonKey: string } | null = {
+  url: 'https://ntnfrcgftftcevrwwyvk.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50bmZyY2dmdGZ0Y2V2cnd3eXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxMjY4NTIsImV4cCI6MjA5ODcwMjg1Mn0.nda1YKsp_oYzHOZmf_Lx7h5R-kbiJEFyLCZ2J-0_s2U'
+};
 
 const CONFIG_KEY = 'runner:supabase';
 
