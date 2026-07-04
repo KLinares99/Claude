@@ -2,7 +2,10 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [claude/exciting-euler-ls7fm3, claude/running-learning-hub-app-g4r6gr, claude/invincible-app-override-84n9mj, claude/strava-running-app-clone-tm06e6]
+    # Runner owns this repo's Pages site. One repo = one Pages URL, so keep
+    # exactly one branch here — a future app should live in its own repo
+    # (which gets its own klinares99.github.io/<repo>/ URL for free).
+    branches: [claude/strava-running-app-clone-tm06e6]
 
 permissions:
   contents: read
