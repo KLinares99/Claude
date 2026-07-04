@@ -39,6 +39,7 @@ export default function Profile() {
         if (!confirm('Restore this backup? It replaces your current data on this device.')) return;
         update((d) => ({
           activities: parsed.activities ?? d.activities,
+          nutrition: { ...d.nutrition, ...(parsed.nutrition ?? {}) },
           settings: { ...d.settings, ...(parsed.settings ?? {}) }
         }));
         toast('Backup restored');

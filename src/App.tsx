@@ -3,14 +3,17 @@ import Nav, { type Tab } from './components/Nav';
 import Logo from './components/Logo';
 import Home from './screens/Home';
 import Record from './screens/Record';
+import Nutrition from './screens/Nutrition';
 import Profile from './screens/Profile';
 import Toast from './components/ui/Toast';
+import QuoteOfDay from './components/QuoteOfDay';
 import { trackerSubscribe, trackerGet } from './lib/tracker';
 import { fmtClock, metersToMiles } from './lib/run';
 
 const titles: Record<Tab, string> = {
   home: 'Runner',
   record: 'Record',
+  nutrition: 'Nutrition',
   you: 'You'
 };
 
@@ -38,6 +41,7 @@ export default function App() {
         <div className={tab === 'record' ? '' : 'hidden'}>
           <Record active={tab === 'record'} />
         </div>
+        {tab === 'nutrition' && <Nutrition />}
         {tab === 'you' && <Profile />}
       </main>
 
@@ -59,6 +63,7 @@ export default function App() {
 
       <Nav active={tab} recording={recording} onChange={setTab} />
       <Toast />
+      <QuoteOfDay />
     </div>
   );
 }

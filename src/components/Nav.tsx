@@ -1,6 +1,6 @@
-import { Home, User, Circle } from 'lucide-react';
+import { Home, User, Circle, UtensilsCrossed } from 'lucide-react';
 
-export type Tab = 'home' | 'record' | 'you';
+export type Tab = 'home' | 'record' | 'nutrition' | 'you';
 
 export default function Nav({
   active,
@@ -16,12 +16,12 @@ export default function Nav({
       className="fixed bottom-0 inset-x-0 z-40 border-t border-line bg-card/95 backdrop-blur"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="max-w-[480px] mx-auto grid grid-cols-3">
+      <div className="max-w-[480px] mx-auto grid grid-cols-4">
         <NavButton on={active === 'home'} label="Home" onClick={() => onChange('home')}>
           <Home size={22} strokeWidth={active === 'home' ? 2.5 : 2} />
         </NavButton>
 
-        {/* center record button */}
+        {/* record button */}
         <button onClick={() => onChange('record')} className="flex flex-col items-center gap-1 py-1.5" aria-label="Record">
           <span
             className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
@@ -34,6 +34,10 @@ export default function Nav({
             Record
           </span>
         </button>
+
+        <NavButton on={active === 'nutrition'} label="Nutrition" onClick={() => onChange('nutrition')}>
+          <UtensilsCrossed size={22} strokeWidth={active === 'nutrition' ? 2.5 : 2} />
+        </NavButton>
 
         <NavButton on={active === 'you'} label="You" onClick={() => onChange('you')}>
           <User size={22} strokeWidth={active === 'you' ? 2.5 : 2} />

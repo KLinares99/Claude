@@ -16,8 +16,21 @@ goals. All data stays on-device (localStorage) with export/import backup.
 2. **Record** — live GPS run (map, time, distance, avg pace, calories,
    splits) plus an **Intervals** mode (run/walk workouts with a cadence
    metronome and audio cues).
-3. **You** — profile, all-time totals, 8-week mileage chart, best efforts
+3. **Nutrition** — MyFitnessPal-style daily diary: Goal − Food + Exercise =
+   Remaining, with the exercise credit computed from your logged runs.
+   Onboarding computes a personal calorie target (Mifflin-St Jeor BMR ×
+   activity ± goal) and macro targets. Log food by searching the built-in
+   ~150-food database, entering macros manually, or with the **AI
+   nutritionist**: photograph or describe a meal and Claude estimates
+   calories + macros per item and gives goal-aware tips. The AI is
+   bring-your-own-key — the user's Anthropic API key is stored only
+   on-device and requests go browser → api.anthropic.com directly (no app
+   server). Everything except the AI works fully offline.
+4. **You** — profile, all-time totals, 8-week mileage chart, best efforts
    (longest run, fastest mile, best avg pace), settings, data & backup.
+
+A **quote / tip of the day** (365+ entries in `src/data/quotes.ts`, indexed
+by day-of-year) greets you once per day when the app opens.
 
 ## Never-reset sessions (the important part)
 The GPS tracker (`src/lib/tracker.ts`) and interval timer

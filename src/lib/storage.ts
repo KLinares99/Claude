@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import type { LatLng } from './run';
+import type { FoodEntry, NutritionProfile } from './nutrition';
 
 export const STORAGE_KEY = 'runner:v1';
 const LEGACY_KEY = 'forge:v1';
@@ -29,6 +30,11 @@ export interface Activity {
 
 export interface RunnerData {
   activities: Activity[];
+  nutrition: {
+    entries: FoodEntry[];
+    profile: NutritionProfile | null;   // null until goals onboarding is done
+    apiKey: string;                      // user's own Anthropic key (device-only)
+  };
   settings: {
     name: string;
     weightLbs: number;
@@ -41,6 +47,7 @@ export interface RunnerData {
 export function defaultData(): RunnerData {
   return {
     activities: [],
+    nutrition: { entries: [], profile: null, apiKey: '' },
     settings: { name: 'Runner', weightLbs: 175, weeklyGoalMiles: 10, runBpm: 170, walkBpm: 120 }
   };
 }
@@ -78,6 +85,7 @@ function migrateLegacy(): RunnerData | null {
     activities.sort((a, b) => a.date.localeCompare(b.date));
     return {
       activities,
+      nutrition: base.nutrition,
       settings: {
         ...base.settings,
         name: old.settings?.name ?? base.settings.name,
@@ -108,6 +116,7 @@ export function loadData(): RunnerData {
     const base = defaultData();
     return {
       activities: parsed.activities ?? base.activities,
+      nutrition: { ...base.nutrition, ...(parsed.nutrition ?? {}) },
       settings: { ...base.settings, ...(parsed.settings ?? {}) }
     };
   } catch {
