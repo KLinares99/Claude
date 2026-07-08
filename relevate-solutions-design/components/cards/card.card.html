@@ -1,0 +1,26 @@
+<!-- @dsCard group="Components" viewport="700x260" name="Card" -->
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;font-family:var(--font-body);background:var(--cloud);padding:20px}</style>
+<div id="root"></div>
+<script type="text/babel">
+const { Card } = window.RelevateSolutionsDesignSystem || {};
+const Icon = () => (
+  <svg viewBox="0 0 24 24" width="26" height="26" stroke="var(--navy)" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+  </svg>
+);
+function Demo(){
+  return (
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16}}>
+      <Card variant="featured" icon={<Icon/>} title="Tax Services">Every deduction you're entitled to — nothing missed.</Card>
+      <Card variant="person" avatar="RC" title="Raymond Castro">CEO · Life &amp; Financial Coach</Card>
+      <Card variant="numbered" eyebrow="01" title="Stewardship">We treat every dollar we touch as a trust.</Card>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>

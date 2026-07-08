@@ -1,0 +1,41 @@
+:root{
+  /* Base palette — Trusted Modern */
+  --navy-900:#0A2540;   /* Midnight Navy — headlines, footer, dark sections */
+  --navy:#0B4E86;       /* Relevate Navy — primary brand color, from logo */
+  --navy-700:#0D5C9E;   /* mid-tone for gradients */
+  --cyan:#21AEE4;       /* Elevation Cyan — CTAs, accents, links, from swoosh */
+  --cyan-hover:#3FBCEC; /* button hover step */
+  --cyan-soft:#E3F4FC;  /* tinted section backgrounds, icon chips */
+  --gold:#E8B54D;       /* Stewardship Gold — sparing accent: quotes, stars */
+  --gold-soft:#FBF1DC;  /* gold tag background */
+  --gold-ink:#8A6519;   /* text on gold-soft */
+  --slate:#55677A;      /* body & secondary text */
+  --silver:#D5DEE6;     /* borders, dividers (from logo silver) */
+  --cloud:#F5F8FA;      /* page background, cards */
+  --white:#FFFFFF;
+  --ink:#16222E;        /* primary body text */
+
+  /* Semantic aliases */
+  --surface-page:var(--white);
+  --surface-alt:var(--cloud);
+  --surface-tint:var(--cyan-soft);
+  --surface-dark:var(--navy-900);
+  --text-heading:var(--navy-900);
+  --text-body:var(--ink);
+  --text-muted:var(--slate);
+  --text-on-dark:#FFFFFF;
+  --text-on-dark-muted:#B9CBDA;
+  --border:var(--silver);
+  --link:var(--navy);
+  --link-hover:var(--cyan);
+  --focus-ring:rgba(33,174,228,.35);
+
+  /* Shadow + radius */
+  --shadow:0 4px 24px rgba(10,37,64,.08);
+  --shadow-lg:0 20px 60px rgba(10,37,64,.25);
+  --radius-sm:8px;
+  --radius:12px;
+  --radius-lg:14px;
+  --radius-xl:20px;
+  --radius-pill:99px;
+}

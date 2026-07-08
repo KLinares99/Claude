@@ -1,0 +1,11 @@
+<!-- @dsCard group="Colors" viewport="700x160" subtitle="Dark section gradient + ring motif" name="Brand Gradient" -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0}
+  .hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#0A2540 0%,#0B4E86 68%,#0D5C9E 100%);height:160px;display:flex;align-items:center;padding:0 28px}
+  .hero::before{content:'';position:absolute;right:-80px;top:-70px;width:280px;height:280px;border-radius:50%;border:44px solid rgba(33,174,228,.12)}
+  .label{position:relative;z-index:1;color:#fff;font-family:'Manrope',sans-serif}
+  .label b{display:block;font-size:20px;font-weight:800}
+  .label span{color:#B9CBDA;font-size:13px}
+</style>
+<div class="hero"><div class="label"><b>navy-900 → navy → navy-700</b><span>135°, used on hero / page-hero / stats / CTA bands only — plus a low-opacity cyan ring bleeding off the corner</span></div></div>

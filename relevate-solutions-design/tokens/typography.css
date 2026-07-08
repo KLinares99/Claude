@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Lora:ital,wght@0,500;1,500&display=swap');
+
+:root{
+  --font-heading:'Manrope', sans-serif;   /* headings, UI labels, buttons */
+  --font-body:'Inter', sans-serif;        /* body copy, forms */
+  --font-editorial:'Lora', serif;         /* pull quotes & testimonials only, italic */
+
+  --text-h1:52px;
+  --text-h1-page:42px; /* interior page-hero h1 */
+  --text-h2:36px;
+  --text-h3:20px;
+  --text-lede:19.5px;
+  --text-body:16.5px;
+  --text-small:14px;
+  --text-tiny:12px;
+
+  --weight-body:400;
+  --weight-medium:500;
+  --weight-semibold:600;
+  --weight-bold:700;
+  --weight-heavy:800;
+
+  --leading-heading:1.15;
+  --leading-body:1.65;
+
+  --tracking-eyebrow:.2em;
+  --tracking-label:.18em;
+}

@@ -1,0 +1,22 @@
+<!-- @dsCard group="Components" viewport="700x120" name="Badge" -->
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;font-family:var(--font-body);background:#fff;padding:20px}</style>
+<div id="root"></div>
+<script type="text/babel">
+const { Badge } = window.RelevateSolutionsDesignSystem || {};
+function Demo(){
+  return (
+    <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+      <Badge>Churches &amp; Ministries</Badge>
+      <Badge>Small Businesses</Badge>
+      <Badge tone="gold">Español</Badge>
+      <Badge tone="gold">Calendly</Badge>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>

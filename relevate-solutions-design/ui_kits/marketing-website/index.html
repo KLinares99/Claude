@@ -1,0 +1,393 @@
+<!-- @dsCard group="Marketing Website" viewport="1140x760" subtitle="Home · About · Contact · Resources · Industries — click-through recreation" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Relevate Solutions — Marketing Website UI Kit</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font-body);color:var(--ink);background:#fff}
+  a{color:var(--link)}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 28px}
+  section{padding:64px 0}
+  .section-alt{background:var(--cloud)}
+  .section-sky{background:var(--cyan-soft)}
+  .label{color:var(--navy);font-family:var(--font-heading);font-weight:800;letter-spacing:.18em;text-transform:uppercase;font-size:12px;margin-bottom:8px}
+  h2{font-size:32px;font-weight:800;font-family:var(--font-heading);color:var(--navy-900);margin:0 0 12px}
+  .section-head{max-width:640px;margin-bottom:36px}
+  .section-head.center{margin:0 auto 36px;text-align:center}
+  .section-head p{color:var(--slate);font-size:16.5px}
+  .grid{display:grid;gap:20px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+  .tabbar{display:flex;gap:4px;padding:10px;background:var(--navy-900);justify-content:center;flex-wrap:wrap}
+  .tabbar button{font-family:var(--font-heading);font-weight:700;font-size:13.5px;color:#B9CBDA;background:transparent;border:none;padding:8px 16px;border-radius:8px;cursor:pointer}
+  .tabbar button.active{background:var(--cyan);color:var(--navy-900)}
+  img.photo{width:100%;border-radius:14px;display:block;object-fit:cover}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {
+  Nav, Footer, Hero, Button, Card, Badge, StatBand, Quote, CTABand, Checklist, ResourceItem, Table, FormField
+} = window.RelevateSolutionsDesignSystem || {};
+
+const NAV_LINKS = [
+  {href:'home', label:'Home'},
+  {href:'about', label:'About'},
+  {href:'contact', label:'Contact'},
+  {href:'resources', label:'Resources'},
+  {href:'industries', label:'Industries'},
+];
+
+const FOOTER_COLUMNS = [
+  {title:'Services', links:[
+    {href:'#',label:'Accounting & Bookkeeping'},
+    {href:'#',label:'Tax Services'},
+    {href:'#',label:'Payroll & Business Support'},
+    {href:'#',label:'Coaching'},
+    {href:'#',label:'Websites & Media'},
+  ]},
+  {title:'Company', links:[
+    {href:'#',label:'About Us'},
+    {href:'#',label:'For Churches'},
+    {href:'#',label:'For Businesses'},
+    {href:'#',label:'Industries We Serve'},
+    {href:'#',label:'Resources & Forms'},
+    {href:'#',label:'Contact'},
+  ]},
+  {title:'Contact', links:[
+    {href:'tel:+18455842118',label:'(845) 584-2118'},
+    {href:'tel:+18458261802',label:'(845) 826-1802'},
+    {href:'mailto:admin@relevatesolutions.com',label:'admin@relevatesolutions.com'},
+  ]},
+];
+
+const ICONS = {
+  ledger: <svg viewBox="0 0 24 24" width="26" height="26" stroke="var(--navy)" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>,
+  tax: <svg viewBox="0 0 24 24" width="26" height="26" stroke="var(--navy)" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>,
+  payroll: <svg viewBox="0 0 24 24" width="26" height="26" stroke="var(--navy)" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 014-4h6a4 4 0 014 4v2M19 8v6M22 11h-6"/></svg>,
+  coach: <svg viewBox="0 0 24 24" width="26" height="26" stroke="var(--navy)" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>,
+};
+
+const NavCtx = React.createContext(() => {});
+
+function PageShell({ active, children }) {
+  const setPage = React.useContext(NavCtx);
+  const handleClick = (e) => {
+    const a = e.target.closest('a');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (href && PAGES_KEYS.includes(href)) {
+      e.preventDefault();
+      setPage(href);
+    }
+  };
+  return (
+    <div onClick={handleClick}>
+      <Nav logoSrc="../../assets/relevate-globe.png" activeHref={active} links={NAV_LINKS} actions={
+        <>
+          <Button variant="dark" size="sm" href="#">Make a Payment</Button>
+          <Button variant="primary" size="sm" href="contact">Book a Consultation</Button>
+        </>
+      } />
+      {children}
+      <Footer
+        logoSrc="../../assets/relevate-globe.png"
+        columns={FOOTER_COLUMNS}
+        bottomLeft="© 2026 Relevate Solutions Inc. All rights reserved."
+        bottomRight={<a href="#" style={{color:'#9FB4C7'}}>Facebook</a>}
+      />
+    </div>
+  );
+}
+
+function HomePage() {
+  return (
+    <PageShell active="home">
+      <Hero
+        variant="home"
+        eyebrow="Accounting · Tax · Payroll · Coaching — English y Español"
+        title={<>Financial Stability &amp; Growth for Your <span style={{color:'var(--cyan)'}}>Church</span> or <span style={{color:'var(--cyan)'}}>Small Business</span></>}
+        lede="Expert accounting, timely tax services, and personalized coaching — tailored for you, so you can focus on leading your community or growing your business."
+        actions={<>
+          <Button variant="primary" href="#">Schedule a Free Consultation</Button>
+          <Button variant="light" href="#">Request a Quote</Button>
+        </>}
+        badges={['★★★★★ Rated 5 out of 5 by our clients', '🌐 Fully bilingual team — hablamos tu idioma', '🕑 24/7 availability, all year round']}
+      />
+
+      <section>
+        <div className="wrap">
+          <div className="section-head center">
+            <div className="label">What We Do</div>
+            <h2>One Trusted Partner. Every Financial Need.</h2>
+            <p>From board-ready books to stress-free tax seasons, Relevate covers the full financial life of your organization.</p>
+          </div>
+          <div className="grid g4">
+            <Card variant="featured" icon={ICONS.ledger} title="Accounting & Bookkeeping" footer={<a className="more" href="#" style={{color:'var(--cyan)',fontFamily:'var(--font-heading)',fontWeight:700,fontSize:14}}>Simplify your books →</a>}>
+              Categorizing, reconciliations, P&amp;L statements, and balance sheets — flawless records for strategic clarity.
+            </Card>
+            <Card variant="featured" icon={ICONS.tax} title="Tax Services" footer={<a href="#" style={{color:'var(--cyan)',fontFamily:'var(--font-heading)',fontWeight:700,fontSize:14}}>End tax anxiety →</a>}>
+              Personal &amp; business returns, sales tax filing, and audit resolution. Every deduction — nothing missed.
+            </Card>
+            <Card variant="featured" icon={ICONS.payroll} title="Payroll & Business Support" footer={<a href="#" style={{color:'var(--cyan)',fontFamily:'var(--font-heading)',fontWeight:700,fontSize:14}}>Handle the back office →</a>}>
+              Payroll processing, permits &amp; licenses expedited, and certified translations.
+            </Card>
+            <Card variant="featured" icon={ICONS.coach} title="Life & Financial Coaching" footer={<a href="#" style={{color:'var(--cyan)',fontFamily:'var(--font-heading)',fontWeight:700,fontSize:14}}>Start your roadmap →</a>}>
+              Twenty years of helping people get from where they are to where they want to be.
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <section className="section-alt">
+        <div className="wrap">
+          <div className="split">
+            <img className="photo" src="../../assets/photo-advisor-meeting.jpg" alt="Advisor meeting with a client over paperwork" />
+            <div>
+              <div className="label">Who We Serve</div>
+              <h2>Built Around Your World</h2>
+              <div className="grid" style={{gap:16}}>
+                <Card title="Churches & Ministries">Lead your congregation. We'll keep the books board-ready.</Card>
+                <Card title="Small Businesses">Focus on your business — leave the accounting to us.</Card>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <StatBand stats={[
+        {value:'20+', label:'Years of experience'},
+        {value:'5.0', label:'Client rating ★★★★★'},
+        {value:'24/7', label:'Availability, year-round'},
+        {value:'2', label:'Languages — English y Español'},
+      ]} />
+
+      <section className="section-sky">
+        <div className="wrap">
+          <div className="split">
+            <div>
+              <div className="label">Client Stories</div>
+              <h2>Trusted by the People We Serve</h2>
+              <Quote by="— Arturo Solis · ★★★★★">"Great service! Mr. Raymond Castro is very understanding and takes his time to get you to your goals."</Quote>
+            </div>
+            <Card title="Meet the team behind your numbers" footer={<Button variant="outline" href="#">Meet the Team</Button>}>
+              Raymond Castro and George Chacko lead a dedicated team of specialists — every client gets a real person who knows their story.
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div className="wrap">
+          <CTABand title="Ready for peace of mind?" subtitle="Book a free consultation — English y Español." actions={<>
+            <Button variant="primary" href="#">Schedule a Consultation</Button>
+            <Button variant="light" href="#">Request a Quote</Button>
+          </>} />
+        </div>
+      </section>
+    </PageShell>
+  );
+}
+
+function AboutPage() {
+  return (
+    <PageShell active="about">
+      <Hero variant="page" eyebrow="About Us" title="Stewardship, Accuracy & a Servant's Heart" lede="We exist to bring clarity, accuracy, and peace of mind to the finances of churches, small businesses, and families — so leaders can focus on their mission, not their books." />
+
+      <section>
+        <div className="wrap">
+          <div className="split">
+            <div>
+              <div className="label">Our Story</div>
+              <h2>Decades of Trust, Earned One Client at a Time</h2>
+              <p style={{color:'var(--slate)',marginBottom:14}}>Relevate Solutions was built on a simple conviction: the people who lead our communities deserve financial guidance that is accurate, personal, and always within reach — in the language you're most comfortable in.</p>
+              <Quote by="— the maxim our practice is built on">"The most meaningful way to succeed is to help others succeed."</Quote>
+            </div>
+            <div className="grid" style={{gap:18}}>
+              <Card variant="numbered" eyebrow="MISSION" title="Peace of mind through flawless financials">Accurate records, on-time filings, and honest counsel.</Card>
+              <Card variant="numbered" eyebrow="PROMISE" title="When you succeed, we succeed">Tailored solutions, available 24/7.</Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section-alt">
+        <div className="wrap">
+          <div className="section-head center">
+            <div className="label">Leadership</div>
+            <h2>Meet the Team</h2>
+            <p>Real people who know your story — not a call center.</p>
+          </div>
+          <div className="grid g2" style={{maxWidth:880,margin:'0 auto 20px'}}>
+            <Card variant="person" avatar="RC" title="Raymond Castro" footer={<Button variant="outline" size="sm" href="#">Book with Raymond</Button>}>CEO · Life &amp; Financial Coach</Card>
+            <Card variant="person" avatar="GC" title="George Chacko" footer={<Button variant="outline" size="sm" href="#">Book with George</Button>}>Accountant · Operations</Card>
+          </div>
+          <div className="grid g4">
+            <Card variant="person" avatar="EA" title="Evelyn Agustin">Bookkeeping Specialist</Card>
+            <Card variant="person" avatar="NU" title="Natalin Ubillus">Financial Reporting</Card>
+            <Card variant="person" avatar="MC" title="Myriam Castro">Payroll &amp; Client Services</Card>
+            <Card variant="person" avatar="DT" title="Damaris Torres">Media &amp; Sales</Card>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div className="wrap">
+          <div className="section-head center">
+            <div className="label">Core Values</div>
+            <h2>What We Stand On</h2>
+          </div>
+          <div className="grid g3">
+            <Card variant="numbered" eyebrow="01" title="Stewardship">We treat every dollar we touch as a trust.</Card>
+            <Card variant="numbered" eyebrow="02" title="Accuracy First">Flawless financials, every ledger, every time.</Card>
+            <Card variant="numbered" eyebrow="03" title="Personal Partnership">Tailored solutions, never one-size-fits-all.</Card>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div className="wrap">
+          <CTABand title="Let's get to know each other." subtitle="A free orientation call — no pressure, just clarity." actions={<>
+            <Button variant="primary" href="#">Schedule a Consultation</Button>
+            <Button variant="light" href="#">Request a Quote</Button>
+          </>} />
+        </div>
+      </section>
+    </PageShell>
+  );
+}
+
+function ContactPage() {
+  return (
+    <PageShell active="contact">
+      <Hero variant="page" eyebrow="Contact" title="Let's Talk About Your Goals" lede="We empower churches, small businesses, and families to achieve sustainable growth through tailored solutions and strategic support." />
+
+      <section>
+        <div className="wrap">
+          <div className="grid g3">
+            <Card title="📞 Phone">(845) 584-2118 · (845) 826-1802<br/><span style={{fontSize:13.5}}>Available 24/7.</span></Card>
+            <Card title="✉️ Email">admin@relevatesolutions.com<br/><span style={{fontSize:13.5}}>We respond promptly, in English y Español.</span></Card>
+            <Card title="🕑 Availability">24/7, all year round — questions don't keep office hours.</Card>
+          </div>
+        </div>
+      </section>
+
+      <section className="section-sky">
+        <div className="wrap">
+          <div className="section-head center">
+            <div className="label">Free Estimation</div>
+            <h2>Request a Quote</h2>
+            <p>Tell us a little about you — we'll get back to you promptly, in English y Español.</p>
+          </div>
+          <div style={{maxWidth:760,margin:'0 auto',background:'#fff',border:'1px solid var(--border)',borderRadius:20,padding:42,boxShadow:'var(--shadow)'}}>
+            <div className="grid g2">
+              <FormField label="Full Name" placeholder="Jane Doe" />
+              <FormField label="Phone" placeholder="(845) 555-0100" />
+            </div>
+            <FormField label="Service Needed" as="select" options={['Accounting & Bookkeeping','Tax Services','Payroll','Coaching']} />
+            <FormField label="Tell us more" as="textarea" placeholder="What can we help with?" />
+            <Button variant="primary" href="#">Send Request</Button>
+          </div>
+        </div>
+      </section>
+    </PageShell>
+  );
+}
+
+function ResourcesPage() {
+  return (
+    <PageShell active="resources">
+      <Hero variant="page" eyebrow="Resources" title="Everything You Need, One Click Away" lede="Client forms, worksheets, study materials, and quick links." />
+      <section>
+        <div className="wrap">
+          <div className="section-head"><div className="label">Forms & Downloads</div><h2>Client Forms</h2></div>
+          <div className="grid" style={{gap:14}}>
+            <ResourceItem title="All-In-One Client Onboarding Form" description="New clients start here" tag={<Badge>PDF</Badge>} />
+            <ResourceItem title="Payroll Intake Form" description="Set up payroll services for your team" tag={<Badge>PDF</Badge>} />
+            <ResourceItem title="Time Sheet" description="Submit hours online" tag={<Badge>Online</Badge>} />
+            <ResourceItem title="Building Use Scheduling — Uso del Edificio" description="Reserve the facility online" tag={<Badge tone="gold">Calendly</Badge>} />
+            <ResourceItem title="Material de Estudio — Licencia de Contratista" description="Study material (Spanish)" tag={<Badge tone="gold">Español</Badge>} />
+          </div>
+        </div>
+      </section>
+      <section>
+        <div className="wrap">
+          <CTABand title="Can't find what you need?" subtitle="Call us — a real person answers, in English y Español." actions={<Button variant="primary" href="#">Schedule a Consultation</Button>} />
+        </div>
+      </section>
+    </PageShell>
+  );
+}
+
+function IndustriesPage() {
+  const industries = ['Auto','Beauty','Carpentry','Cleaning','Construction','Landscaping','Painting','Restaurants','Retail','Real Estate'];
+  return (
+    <PageShell active="industries">
+      <Hero variant="page" eyebrow="Who We Serve" title="19 Industries. One Financial Partner." lede="Bookkeeping, taxes, payroll, and coaching for the trades that keep our communities running." />
+      <section>
+        <div className="wrap">
+          <div className="section-head center"><div className="label">Industries We Serve</div><h2>We Already Know Your Business</h2></div>
+          <div className="grid g4">
+            {industries.map(name => (
+              <Card key={name} footer={<a href="#" style={{color:'var(--cyan)',fontFamily:'var(--font-heading)',fontWeight:700,fontSize:13}}>Free {name.toLowerCase()} guide →</a>}>
+                <Badge>{name}</Badge>
+                <div style={{fontFamily:'var(--font-heading)',fontWeight:700,color:'var(--navy-900)',fontSize:15,marginTop:10}}>Industry-specific books, handled.</div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+      <section className="section-sky">
+        <div className="wrap">
+          <div className="split">
+            <div>
+              <div className="label">Why Industry Focus Matters</div>
+              <h2>Your Books Should Speak Your Trade</h2>
+              <p style={{color:'var(--slate)'}}>Every industry has money patterns generic bookkeeping misses. We've done the reps in yours.</p>
+            </div>
+            <Card title="Also serving">
+              <Checklist items={[
+                <><b>Churches &amp; ministries</b> — board-ready books and clergy tax expertise</>,
+                <><b>Individuals &amp; families</b> — personal taxes and financial coaching</>,
+                <><b>Nonprofits</b> — stewardship-grade accounting</>,
+              ]} />
+            </Card>
+          </div>
+        </div>
+      </section>
+    </PageShell>
+  );
+}
+
+const PAGES = { home: HomePage, about: AboutPage, contact: ContactPage, resources: ResourcesPage, industries: IndustriesPage };
+const PAGES_KEYS = Object.keys(PAGES);
+
+function App() {
+  const [page, setPage] = React.useState('home');
+  const Page = PAGES[page];
+  return (
+    <NavCtx.Provider value={setPage}>
+      <div className="tabbar">
+        {PAGES_KEYS.map(k => (
+          <button key={k} className={k === page ? 'active' : ''} onClick={() => setPage(k)}>{k[0].toUpperCase()+k.slice(1)}</button>
+        ))}
+      </div>
+      <Page />
+    </NavCtx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
