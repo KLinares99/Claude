@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState } from 'react';
-import { Search, Sparkles, PencilLine, Camera, Loader2, X, Check, KeyRound } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Search, Sparkles, PencilLine, Camera, Loader2, X, Check, KeyRound, Globe } from 'lucide-react';
 import { useStore, uid } from '../lib/storage';
 import { type Meal, type FoodEntry, calorieTarget, entryTotals } from '../lib/nutrition';
 import { FOOD_DB } from '../data/foods';
+import { searchOnlineFoods, type OnlineFood } from '../lib/foodSearch';
 import { analyzeFood, fileToJpegBase64, aiErrorMessage, type AiAnalysis } from '../lib/ai';
 
 type Mode = 'search' | 'ai' | 'manual';
@@ -93,6 +94,35 @@ function SearchMode({ meal, date, onAdd }: { meal: Meal; date: string; onAdd: (i
     return FOOD_DB.filter(([name]) => name.toLowerCase().includes(term)).slice(0, 25);
   }, [q]);
 
+  // online search (Open Food Facts) — debounced, cancels stale requests
+  const [online, setOnline] = useState<OnlineFood[]>([]);
+  const [onlineState, setOnlineState] = useState<'idle' | 'loading' | 'error'>('idle');
+  useEffect(() => {
+    const term = q.trim();
+    setOnline([]);
+    if (term.length < 2) {
+      setOnlineState('idle');
+      return;
+    }
+    setOnlineState('loading');
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const found = await searchOnlineFoods(term, ctrl.signal);
+        // hide online rows that duplicate a local DB name
+        const local = new Set(results.map(([n]) => n.toLowerCase()));
+        setOnline(found.filter((f) => !local.has(f.name.toLowerCase())));
+        setOnlineState('idle');
+      } catch (err) {
+        if ((err as Error)?.name !== 'AbortError') setOnlineState('error');
+      }
+    }, 450);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [q, results]);
+
   const submit = () => {
     if (!picked) return;
     onAdd([{ ...picked, id: uid(), date, meal, servings }]);
@@ -153,20 +183,52 @@ function SearchMode({ meal, date, onAdd }: { meal: Meal; date: string; onAdd: (i
         </>
       )}
       {q && (
-        <div className="divide-y divide-line">
-          {results.length === 0 && (
-            <p className="text-sm text-dim py-4 text-center">
-              No match — try the <span className="font-bold">AI scan</span> or <span className="font-bold">Manual</span> tab.
-            </p>
+        <div className="space-y-1">
+          {results.length > 0 && (
+            <>
+              <div className="label pt-1">Common foods</div>
+              <div className="divide-y divide-line">
+                {results.map(([name, serving, cal, p, c, f]) => (
+                  <FoodRowButton
+                    key={name}
+                    name={name}
+                    sub={`${serving} · ${cal} kcal · P${p} C${c} F${f}`}
+                    onClick={() => setPicked({ name, serving, calories: cal, protein: p, carbs: c, fat: f, source: 'db' })}
+                  />
+                ))}
+              </div>
+            </>
           )}
-          {results.map(([name, serving, cal, p, c, f]) => (
-            <FoodRowButton
-              key={name}
-              name={name}
-              sub={`${serving} · ${cal} kcal · P${p} C${c} F${f}`}
-              onClick={() => setPicked({ name, serving, calories: cal, protein: p, carbs: c, fat: f, source: 'db' })}
-            />
-          ))}
+
+          {/* online results — Open Food Facts */}
+          {q.trim().length >= 2 && (
+            <>
+              <div className="label pt-3 flex items-center gap-1.5">
+                <Globe size={12} /> Open Food Facts
+                {onlineState === 'loading' && <Loader2 size={12} className="animate-spin" />}
+              </div>
+              {onlineState === 'error' ? (
+                <p className="text-xs text-dim py-2">Couldn't reach the online database — check your connection, or use AI scan / Manual.</p>
+              ) : online.length > 0 ? (
+                <div className="divide-y divide-line">
+                  {online.map((f, i) => (
+                    <FoodRowButton
+                      key={`${f.name}-${i}`}
+                      name={f.name}
+                      sub={`${f.serving} · ${f.calories} kcal · P${f.protein} C${f.carbs} F${f.fat}`}
+                      onClick={() => setPicked({ name: f.name, serving: f.serving, calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat, source: 'db' })}
+                    />
+                  ))}
+                </div>
+              ) : onlineState === 'idle' ? (
+                <p className="text-xs text-dim py-2">No online matches. Try a different term, or use AI scan / Manual.</p>
+              ) : null}
+            </>
+          )}
+
+          {results.length === 0 && online.length === 0 && onlineState === 'loading' && (
+            <p className="text-sm text-dim py-4 text-center">Searching…</p>
+          )}
         </div>
       )}
     </div>
