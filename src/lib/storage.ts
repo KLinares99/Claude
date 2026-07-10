@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import type { LatLng } from './run';
-import type { FoodEntry, NutritionProfile } from './nutrition';
+import type { FoodEntry, NutritionProfile, SavedMeal } from './nutrition';
 
 export const STORAGE_KEY = 'runner:v1';
 const LEGACY_KEY = 'forge:v1';
@@ -32,6 +32,7 @@ export interface RunnerData {
   activities: Activity[];
   nutrition: {
     entries: FoodEntry[];
+    meals: SavedMeal[];                  // saved custom meals / favorites
     profile: NutritionProfile | null;   // null until goals onboarding is done
     apiKey: string;                      // user's own Anthropic key (device-only)
   };
@@ -47,7 +48,7 @@ export interface RunnerData {
 export function defaultData(): RunnerData {
   return {
     activities: [],
-    nutrition: { entries: [], profile: null, apiKey: '' },
+    nutrition: { entries: [], meals: [], profile: null, apiKey: '' },
     settings: { name: 'Runner', weightLbs: 175, weeklyGoalMiles: 10, runBpm: 170, walkBpm: 120 }
   };
 }

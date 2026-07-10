@@ -61,6 +61,13 @@ export default function Profile() {
               haveFood.add(e.id);
             }
           }
+          const haveMeal = new Set((d.nutrition.meals ?? []).map((m) => m.id));
+          for (const m of parsed.nutrition?.meals ?? []) {
+            if (!haveMeal.has(m.id)) {
+              d.nutrition.meals.push(m);
+              haveMeal.add(m.id);
+            }
+          }
           // On a fresh/wiped device, fully restore profile + settings from the
           // backup; on a device already in use, keep current settings.
           if (fresh) {

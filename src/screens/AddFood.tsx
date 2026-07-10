@@ -1,17 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Sparkles, PencilLine, Camera, Loader2, X, Check, KeyRound, Globe } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Search, Sparkles, PencilLine, Camera, Loader2, X, Check, KeyRound, BookMarked, Star, Trash2, Plus } from 'lucide-react';
 import { useStore, uid } from '../lib/storage';
-import { type Meal, type FoodEntry, calorieTarget, entryTotals } from '../lib/nutrition';
-import { FOOD_DB } from '../data/foods';
-import { searchOnlineFoods, type OnlineFood } from '../lib/foodSearch';
+import {
+  type Meal, type FoodEntry, type SavedMeal, type MealComponent,
+  calorieTarget, entryTotals, mealTotals
+} from '../lib/nutrition';
 import { analyzeFood, fileToJpegBase64, aiErrorMessage, type AiAnalysis } from '../lib/ai';
+import FoodSearch, { type PickableFood } from '../components/FoodSearch';
+import { toast } from '../lib/toast';
 
-type Mode = 'search' | 'ai' | 'manual';
+type Mode = 'search' | 'meals' | 'ai' | 'manual';
 
 /**
- * Add-food sheet: search the built-in database (+ your recent foods),
- * describe or photograph a meal for the AI nutritionist, or enter macros
- * manually.
+ * Add-food sheet: search foods (built-in + Open Food Facts), pick from your
+ * saved custom meals, scan/describe a meal with the AI nutritionist, or
+ * enter macros manually.
  */
 export default function AddFoodSheet({
   meal, date, caloriesSoFar, onClose, onAdd
@@ -39,13 +42,15 @@ export default function AddFoodSheet({
           </button>
         </div>
 
-        <div className="card p-1 grid grid-cols-3 gap-1">
+        <div className="card p-1 grid grid-cols-4 gap-1">
           <ModeTab on={mode === 'search'} onClick={() => setMode('search')} icon={<Search size={14} />} label="Search" />
+          <ModeTab on={mode === 'meals'} onClick={() => setMode('meals')} icon={<BookMarked size={14} />} label="Meals" />
           <ModeTab on={mode === 'ai'} onClick={() => setMode('ai')} icon={<Sparkles size={14} />} label="AI scan" />
           <ModeTab on={mode === 'manual'} onClick={() => setMode('manual')} icon={<PencilLine size={14} />} label="Manual" />
         </div>
 
         {mode === 'search' && <SearchMode meal={meal} date={date} onAdd={onAdd} />}
+        {mode === 'meals' && <MealsMode meal={meal} date={date} onAdd={onAdd} />}
         {mode === 'ai' && <AiMode meal={meal} date={date} caloriesSoFar={caloriesSoFar} onAdd={onAdd} />}
         {mode === 'manual' && <ManualMode meal={meal} date={date} onAdd={onAdd} />}
       </div>
@@ -57,7 +62,7 @@ function ModeTab({ on, onClick, icon, label }: { on: boolean; onClick: () => voi
   return (
     <button
       onClick={onClick}
-      className={`rounded-xl py-2 text-xs font-bold flex items-center justify-center gap-1 ${
+      className={`rounded-xl py-2 text-[11px] font-bold flex items-center justify-center gap-1 ${
         on ? 'bg-ink text-white' : 'text-dim hover:text-ink'
       }`}
     >
@@ -66,93 +71,178 @@ function ModeTab({ on, onClick, icon, label }: { on: boolean; onClick: () => voi
   );
 }
 
+/** Save a single food as a one-component favorite meal. */
+function saveFoodAsMeal(
+  update: ReturnType<typeof useStore>['update'],
+  f: PickableFood
+) {
+  const meal: SavedMeal = {
+    id: uid(),
+    name: f.name,
+    favorite: true,
+    createdAt: new Date().toISOString(),
+    components: [{ name: f.name, serving: f.serving, servings: 1, calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat }]
+  };
+  update((d) => {
+    // don't duplicate an identical favorite by name
+    if (!d.nutrition.meals.some((m) => m.name.toLowerCase() === meal.name.toLowerCase())) {
+      d.nutrition.meals.push(meal);
+    }
+    return d;
+  });
+  toast(`Saved "${f.name}" to Meals ⭐`);
+}
+
 // ---- search ----------------------------------------------------------------
 
 function SearchMode({ meal, date, onAdd }: { meal: Meal; date: string; onAdd: (items: FoodEntry[]) => void }) {
-  const { data } = useStore();
-  const [q, setQ] = useState('');
-  const [picked, setPicked] = useState<Omit<FoodEntry, 'id' | 'date' | 'meal' | 'servings'> | null>(null);
+  const { data, update } = useStore();
+  const [picked, setPicked] = useState<PickableFood | null>(null);
   const [servings, setServings] = useState(1);
 
   // recent foods: latest unique names the user logged, so frequent meals are one tap
-  const recents = useMemo(() => {
+  const recents = useMemo<PickableFood[]>(() => {
     const seen = new Set<string>();
-    const out: FoodEntry[] = [];
+    const out: PickableFood[] = [];
     for (let i = data.nutrition.entries.length - 1; i >= 0 && out.length < 8; i--) {
       const e = data.nutrition.entries[i];
       if (!seen.has(e.name)) {
         seen.add(e.name);
-        out.push(e);
+        out.push({ name: e.name, serving: e.serving, calories: e.calories, protein: e.protein, carbs: e.carbs, fat: e.fat, source: e.source });
       }
     }
     return out;
   }, [data.nutrition.entries]);
 
-  const results = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return [];
-    return FOOD_DB.filter(([name]) => name.toLowerCase().includes(term)).slice(0, 25);
-  }, [q]);
-
-  // online search (Open Food Facts) — debounced, cancels stale requests
-  const [online, setOnline] = useState<OnlineFood[]>([]);
-  const [onlineState, setOnlineState] = useState<'idle' | 'loading' | 'error'>('idle');
-  useEffect(() => {
-    const term = q.trim();
-    setOnline([]);
-    if (term.length < 2) {
-      setOnlineState('idle');
-      return;
-    }
-    setOnlineState('loading');
-    const ctrl = new AbortController();
-    const t = setTimeout(async () => {
-      try {
-        const found = await searchOnlineFoods(term, ctrl.signal);
-        // hide online rows that duplicate a local DB name
-        const local = new Set(results.map(([n]) => n.toLowerCase()));
-        setOnline(found.filter((f) => !local.has(f.name.toLowerCase())));
-        setOnlineState('idle');
-      } catch (err) {
-        if ((err as Error)?.name !== 'AbortError') setOnlineState('error');
-      }
-    }, 450);
-    return () => {
-      clearTimeout(t);
-      ctrl.abort();
-    };
-  }, [q, results]);
-
-  const submit = () => {
-    if (!picked) return;
-    onAdd([{ ...picked, id: uid(), date, meal, servings }]);
-  };
-
   if (picked) {
-    const preview = entryTotals({ ...picked, id: '', date, meal, servings });
+    return (
+      <PortionPicker
+        food={picked}
+        servings={servings}
+        setServings={setServings}
+        onBack={() => setPicked(null)}
+        onLog={() =>
+          onAdd([{
+            name: picked.name, serving: picked.serving, calories: picked.calories,
+            protein: picked.protein, carbs: picked.carbs, fat: picked.fat, source: picked.source,
+            id: uid(), date, meal, servings
+          }])
+        }
+      />
+    );
+  }
+
+  return (
+    <FoodSearch
+      recents={recents}
+      onPick={(f) => { setServings(1); setPicked(f); }}
+      onSave={(f) => saveFoodAsMeal(update, f)}
+    />
+  );
+}
+
+/** Serving stepper + macro preview + log button. */
+function PortionPicker({
+  food, servings, setServings, onBack, onLog
+}: {
+  food: PickableFood;
+  servings: number;
+  setServings: (n: number) => void;
+  onBack: () => void;
+  onLog: () => void;
+}) {
+  const preview = entryTotals({ ...food, id: '', date: '', meal: 'breakfast', servings });
+  return (
+    <div className="space-y-4">
+      <div className="bg-paper rounded-xl p-3">
+        <div className="font-bold">{food.name}</div>
+        <div className="text-xs text-dim">{food.serving} · {food.calories} kcal · P{food.protein} C{food.carbs} F{food.fat}</div>
+      </div>
+      <label className="block">
+        <span className="label block mb-1">Servings</span>
+        <div className="flex items-center gap-3">
+          <button className="btn-ghost w-11 h-11 !p-0 text-xl" onClick={() => setServings(Math.max(0.25, +(servings - 0.5).toFixed(2)))}>−</button>
+          <input
+            className="input w-20 text-center"
+            inputMode="decimal"
+            value={servings}
+            onChange={(e) => setServings(Math.max(0.1, parseFloat(e.target.value || '1')))}
+          />
+          <button className="btn-ghost w-11 h-11 !p-0 text-xl" onClick={() => setServings(+(servings + 0.5).toFixed(2))}>+</button>
+          <span className="stat-num text-lg ml-auto">{preview.calories} kcal</span>
+        </div>
+      </label>
+      <div className="flex gap-2">
+        <button className="btn-primary flex-1" onClick={onLog}><Check size={18} /> Log it</button>
+        <button className="btn-ghost" onClick={onBack}>Back</button>
+      </div>
+    </div>
+  );
+}
+
+// ---- my meals ----------------------------------------------------------------
+
+function MealsMode({ meal, date, onAdd }: { meal: Meal; date: string; onAdd: (items: FoodEntry[]) => void }) {
+  const { data, update } = useStore();
+  const [building, setBuilding] = useState<SavedMeal | null>(null);
+  const [logging, setLogging] = useState<SavedMeal | null>(null);
+  const [batch, setBatch] = useState(1);
+
+  const meals = useMemo(
+    () => [...data.nutrition.meals].sort((a, b) => Number(b.favorite) - Number(a.favorite) || b.createdAt.localeCompare(a.createdAt)),
+    [data.nutrition.meals]
+  );
+
+  if (building) {
+    return (
+      <MealBuilder
+        initial={building}
+        onCancel={() => setBuilding(null)}
+        onSave={(m) => {
+          update((d) => {
+            const i = d.nutrition.meals.findIndex((x) => x.id === m.id);
+            if (i >= 0) d.nutrition.meals[i] = m;
+            else d.nutrition.meals.push(m);
+            return d;
+          });
+          setBuilding(null);
+          toast('Meal saved');
+        }}
+      />
+    );
+  }
+
+  // logging: choose how many batches (meal-prep) to log
+  if (logging) {
+    const t = mealTotals(logging);
     return (
       <div className="space-y-4">
         <div className="bg-paper rounded-xl p-3">
-          <div className="font-bold">{picked.name}</div>
-          <div className="text-xs text-dim">{picked.serving} · {picked.calories} kcal · P{picked.protein} C{picked.carbs} F{picked.fat}</div>
+          <div className="font-bold">{logging.name}</div>
+          <div className="text-xs text-dim">{logging.components.length} item{logging.components.length === 1 ? '' : 's'} · {t.calories} kcal · P{t.protein} C{t.carbs} F{t.fat}</div>
         </div>
         <label className="block">
-          <span className="label block mb-1">Servings</span>
+          <span className="label block mb-1">Servings (meal-prep batches)</span>
           <div className="flex items-center gap-3">
-            <button className="btn-ghost w-11 h-11 !p-0 text-xl" onClick={() => setServings(Math.max(0.25, +(servings - 0.5).toFixed(2)))}>−</button>
-            <input
-              className="input w-20 text-center"
-              inputMode="decimal"
-              value={servings}
-              onChange={(e) => setServings(Math.max(0.1, parseFloat(e.target.value || '1')))}
-            />
-            <button className="btn-ghost w-11 h-11 !p-0 text-xl" onClick={() => setServings(+(servings + 0.5).toFixed(2))}>+</button>
-            <span className="stat-num text-lg ml-auto">{preview.calories} kcal</span>
+            <button className="btn-ghost w-11 h-11 !p-0 text-xl" onClick={() => setBatch(Math.max(0.25, +(batch - 0.5).toFixed(2)))}>−</button>
+            <input className="input w-20 text-center" inputMode="decimal" value={batch} onChange={(e) => setBatch(Math.max(0.1, parseFloat(e.target.value || '1')))} />
+            <button className="btn-ghost w-11 h-11 !p-0 text-xl" onClick={() => setBatch(+(batch + 0.5).toFixed(2))}>+</button>
+            <span className="stat-num text-lg ml-auto">{Math.round(t.calories * batch)} kcal</span>
           </div>
         </label>
         <div className="flex gap-2">
-          <button className="btn-primary flex-1" onClick={submit}><Check size={18} /> Log it</button>
-          <button className="btn-ghost" onClick={() => setPicked(null)}>Back</button>
+          <button
+            className="btn-primary flex-1"
+            onClick={() => {
+              onAdd([{
+                id: uid(), date, meal, name: logging.name, serving: '1 meal', servings: batch,
+                calories: t.calories, protein: t.protein, carbs: t.carbs, fat: t.fat, source: 'meal'
+              }]);
+            }}
+          >
+            <Check size={18} /> Log it
+          </button>
+          <button className="btn-ghost" onClick={() => { setLogging(null); setBatch(1); }}>Back</button>
         </div>
       </div>
     );
@@ -160,90 +250,141 @@ function SearchMode({ meal, date, onAdd }: { meal: Meal; date: string; onAdd: (i
 
   return (
     <div className="space-y-3">
-      <input
-        className="input w-full"
-        placeholder="Search foods — chicken, rice, pizza…"
-        value={q}
-        autoFocus
-        onChange={(e) => setQ(e.target.value)}
-      />
-      {!q && recents.length > 0 && (
-        <>
-          <div className="label">Recent</div>
-          <div className="divide-y divide-line">
-            {recents.map((r) => (
-              <FoodRowButton
-                key={r.id}
-                name={r.name}
-                sub={`${r.serving} · ${r.calories} kcal`}
-                onClick={() => setPicked({ name: r.name, serving: r.serving, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat, source: r.source })}
-              />
-            ))}
-          </div>
-        </>
-      )}
-      {q && (
-        <div className="space-y-1">
-          {results.length > 0 && (
-            <>
-              <div className="label pt-1">Common foods</div>
-              <div className="divide-y divide-line">
-                {results.map(([name, serving, cal, p, c, f]) => (
-                  <FoodRowButton
-                    key={name}
-                    name={name}
-                    sub={`${serving} · ${cal} kcal · P${p} C${c} F${f}`}
-                    onClick={() => setPicked({ name, serving, calories: cal, protein: p, carbs: c, fat: f, source: 'db' })}
-                  />
-                ))}
-              </div>
-            </>
-          )}
+      <button
+        className="btn-primary w-full"
+        onClick={() => setBuilding({ id: uid(), name: '', favorite: true, components: [], createdAt: new Date().toISOString() })}
+      >
+        <Plus size={18} /> Create a meal
+      </button>
 
-          {/* online results — Open Food Facts */}
-          {q.trim().length >= 2 && (
-            <>
-              <div className="label pt-3 flex items-center gap-1.5">
-                <Globe size={12} /> Open Food Facts
-                {onlineState === 'loading' && <Loader2 size={12} className="animate-spin" />}
-              </div>
-              {onlineState === 'error' ? (
-                <p className="text-xs text-dim py-2">Couldn't reach the online database — check your connection, or use AI scan / Manual.</p>
-              ) : online.length > 0 ? (
-                <div className="divide-y divide-line">
-                  {online.map((f, i) => (
-                    <FoodRowButton
-                      key={`${f.name}-${i}`}
-                      name={f.name}
-                      sub={`${f.serving} · ${f.calories} kcal · P${f.protein} C${f.carbs} F${f.fat}`}
-                      onClick={() => setPicked({ name: f.name, serving: f.serving, calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat, source: 'db' })}
-                    />
-                  ))}
+      {meals.length === 0 ? (
+        <p className="text-sm text-dim text-center py-6">
+          No saved meals yet. Build a custom meal for meal prep, or tap the ⭐ on any
+          food in Search to save it here.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {meals.map((m) => {
+            const t = mealTotals(m);
+            return (
+              <div key={m.id} className="rounded-xl border border-line p-3">
+                <div className="flex items-start gap-2">
+                  <button className="flex-1 text-left min-w-0" onClick={() => { setBatch(1); setLogging(m); }}>
+                    <div className="font-bold truncate flex items-center gap-1.5">
+                      {m.favorite && <Star size={13} className="text-brand shrink-0" fill="currentColor" />}
+                      {m.name}
+                    </div>
+                    <div className="text-[11px] text-dim nums">
+                      {m.components.length} item{m.components.length === 1 ? '' : 's'} · {t.calories} kcal · P{t.protein} C{t.carbs} F{t.fat}
+                    </div>
+                  </button>
+                  <button className="text-dim hover:text-ink p-1" aria-label="Edit meal" onClick={() => setBuilding(m)}>
+                    <PencilLine size={15} />
+                  </button>
+                  <button
+                    className="text-faint hover:text-bad p-1"
+                    aria-label="Delete meal"
+                    onClick={() => update((d) => ({ ...d, nutrition: { ...d.nutrition, meals: d.nutrition.meals.filter((x) => x.id !== m.id) } }))}
+                  >
+                    <Trash2 size={15} />
+                  </button>
                 </div>
-              ) : onlineState === 'idle' ? (
-                <p className="text-xs text-dim py-2">No online matches. Try a different term, or use AI scan / Manual.</p>
-              ) : null}
-            </>
-          )}
-
-          {results.length === 0 && online.length === 0 && onlineState === 'loading' && (
-            <p className="text-sm text-dim py-4 text-center">Searching…</p>
-          )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-function FoodRowButton({ name, sub, onClick }: { name: string; sub: string; onClick: () => void }) {
-  return (
-    <button className="w-full text-left py-2.5 flex items-center justify-between gap-2" onClick={onClick}>
-      <div className="min-w-0">
-        <div className="text-sm font-semibold truncate">{name}</div>
-        <div className="text-[11px] text-dim nums">{sub}</div>
+/** Build or edit a custom meal — name + components (add via search or manual). */
+function MealBuilder({
+  initial, onSave, onCancel
+}: {
+  initial: SavedMeal;
+  onSave: (m: SavedMeal) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(initial.name);
+  const [favorite, setFavorite] = useState(initial.favorite);
+  const [components, setComponents] = useState<MealComponent[]>(initial.components);
+  const [adding, setAdding] = useState(false);
+
+  const t = mealTotals({ ...initial, components });
+
+  if (adding) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-black">Add an ingredient</h3>
+          <button className="text-dim hover:text-ink text-sm font-bold" onClick={() => setAdding(false)}>Done</button>
+        </div>
+        <FoodSearch
+          onPick={(f) => {
+            setComponents((cs) => [...cs, { name: f.name, serving: f.serving, servings: 1, calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat }]);
+            toast(`Added ${f.name}`);
+          }}
+        />
       </div>
-      <span className="text-brand"><Check size={16} className="opacity-0" /><span className="sr-only">select</span></span>
-    </button>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <label className="block">
+        <span className="label block mb-1">Meal name</span>
+        <input className="input w-full" placeholder="Chicken & rice meal prep" value={name} autoFocus onChange={(e) => setName(e.target.value)} />
+      </label>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="label">Ingredients</span>
+          <span className="stat-num text-sm">{t.calories} kcal · P{t.protein} C{t.carbs} F{t.fat}</span>
+        </div>
+        {components.length === 0 ? (
+          <p className="text-xs text-dim py-2">No ingredients yet — add foods below.</p>
+        ) : (
+          <div className="divide-y divide-line">
+            {components.map((c, i) => (
+              <div key={i} className="flex items-center gap-2 py-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate">{c.name}</div>
+                  <div className="text-[11px] text-dim nums">{Math.round(c.calories * c.servings)} kcal</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button className="btn-ghost w-8 h-8 !p-0" onClick={() => setComponents((cs) => cs.map((x, j) => j === i ? { ...x, servings: Math.max(0.25, +(x.servings - 0.5).toFixed(2)) } : x))}>−</button>
+                  <span className="w-8 text-center text-sm nums">{c.servings}</span>
+                  <button className="btn-ghost w-8 h-8 !p-0" onClick={() => setComponents((cs) => cs.map((x, j) => j === i ? { ...x, servings: +(x.servings + 0.5).toFixed(2) } : x))}>+</button>
+                </div>
+                <button className="text-faint hover:text-bad p-1" aria-label="Remove" onClick={() => setComponents((cs) => cs.filter((_, j) => j !== i))}>
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <button className="btn-ghost w-full mt-2" onClick={() => setAdding(true)}>
+          <Plus size={16} /> Add ingredient
+        </button>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" className="w-4 h-4 accent-[#FC4C02]" checked={favorite} onChange={(e) => setFavorite(e.target.checked)} />
+        Favorite (pin to top)
+      </label>
+
+      <div className="flex gap-2">
+        <button
+          className="btn-primary flex-1"
+          disabled={!name.trim() || components.length === 0}
+          onClick={() => onSave({ ...initial, name: name.trim(), favorite, components })}
+        >
+          <Check size={18} /> Save meal
+        </button>
+        <button className="btn-ghost" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
   );
 }
 

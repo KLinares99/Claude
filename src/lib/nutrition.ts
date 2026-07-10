@@ -23,7 +23,45 @@ export interface FoodEntry {
   protein: number;     // g per serving
   carbs: number;
   fat: number;
-  source: 'db' | 'ai' | 'manual';
+  source: 'db' | 'ai' | 'manual' | 'meal';
+}
+
+/** One food inside a saved meal (its own per-serving macros × servings). */
+export interface MealComponent {
+  name: string;
+  serving: string;
+  servings: number;
+  calories: number;    // per serving
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+/** A reusable custom meal — a favorited bundle of foods for quick logging
+ *  and meal prep (log N batches at once). */
+export interface SavedMeal {
+  id: string;
+  name: string;
+  favorite: boolean;
+  components: MealComponent[];
+  createdAt: string;
+}
+
+/** Combined per-batch macros for a saved meal. */
+export function mealTotals(m: SavedMeal): { calories: number; protein: number; carbs: number; fat: number } {
+  const t = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  for (const c of m.components) {
+    t.calories += c.calories * c.servings;
+    t.protein += c.protein * c.servings;
+    t.carbs += c.carbs * c.servings;
+    t.fat += c.fat * c.servings;
+  }
+  return {
+    calories: Math.round(t.calories),
+    protein: Math.round(t.protein * 10) / 10,
+    carbs: Math.round(t.carbs * 10) / 10,
+    fat: Math.round(t.fat * 10) / 10
+  };
 }
 
 export interface NutritionProfile {
