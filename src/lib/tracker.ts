@@ -26,6 +26,7 @@ export interface TrackerState {
   error: string;
   startedAt: number | null; // epoch ms of session start
   restored: boolean;        // true if recovered from a reload
+  goalMiles: number | null; // target distance (5K, 10K, …) for est. finish
 }
 
 const MIN_MOVE_M = 4;      // ignore jitter below this
@@ -35,7 +36,7 @@ const SNAPSHOT_KEY = 'runner:activeRun';
 
 const idleState: TrackerState = {
   phase: 'idle', elapsed: 0, meters: 0, route: [], splits: [],
-  accuracy: null, lastPos: null, error: '', startedAt: null, restored: false
+  accuracy: null, lastPos: null, error: '', startedAt: null, restored: false, goalMiles: null
 };
 
 let state: TrackerState = { ...idleState };
@@ -77,7 +78,8 @@ function snapshot() {
       splits: state.splits,
       startedAt: state.startedAt,
       mileMark,
-      splitBaseSec
+      splitBaseSec,
+      goalMiles: state.goalMiles
     }));
   } catch { /* ignore */ }
 }
@@ -92,7 +94,7 @@ function restore() {
     if (!raw) return;
     const s = JSON.parse(raw) as {
       activeMs: number; meters: number; route: LatLng[]; splits: Split[];
-      startedAt: number | null; mileMark: number; splitBaseSec: number;
+      startedAt: number | null; mileMark: number; splitBaseSec: number; goalMiles?: number | null;
     };
     if (!s || typeof s.activeMs !== 'number' || s.activeMs < 1000) return;
     activeMs = s.activeMs;
@@ -108,7 +110,8 @@ function restore() {
       route: s.route ?? [],
       splits: s.splits ?? [],
       startedAt: s.startedAt ?? Date.now(),
-      restored: true
+      restored: true,
+      goalMiles: s.goalMiles ?? null
     };
   } catch { /* ignore */ }
 }
@@ -197,16 +200,23 @@ function stopTicker() {
 // ---- public API ---------------------------------------------------------------
 
 export function trackerStart() {
+  const goalMiles = state.goalMiles; // keep any goal picked before starting
   activeMs = 0;
   segStart = Date.now();
   lastPt = null;
   mileMark = 1;
   splitBaseSec = 0;
-  state = { ...idleState, phase: 'running', startedAt: Date.now() };
+  state = { ...idleState, phase: 'running', startedAt: Date.now(), goalMiles };
   emit();
   startWatch();
   startTicker();
   void acquireWakeLock();
+  snapshot();
+}
+
+/** Set (or clear) the target distance in miles for the live estimated finish. */
+export function trackerSetGoal(miles: number | null) {
+  set({ goalMiles: miles });
   snapshot();
 }
 

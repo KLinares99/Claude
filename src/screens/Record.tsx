@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Play, Pause, Square, Satellite } from 'lucide-react';
-import { fmtClock, paceFor, metersToMiles, caloriesFor, defaultRunName, type LatLng } from '../lib/run';
+import { fmtClock, paceFor, metersToMiles, caloriesFor, defaultRunName, RACE_DISTANCES, type LatLng } from '../lib/run';
 import {
   trackerSubscribe, trackerGet, trackerStart, trackerPause, trackerResume,
-  trackerFinish, trackerDiscard
+  trackerFinish, trackerDiscard, trackerSetGoal
 } from '../lib/tracker';
 import { useStore } from '../lib/storage';
 import { toast } from '../lib/toast';
@@ -131,6 +131,9 @@ export default function Record({ active }: { active: boolean }) {
           )}
         </div>
 
+        {/* distance goal + estimated finish */}
+        <GoalCard elapsed={s.elapsed} miles={miles} goalMiles={s.goalMiles} />
+
         {s.error && (
           <div className="card-pad border-l-4 !border-l-brand text-sm text-dim">{s.error}</div>
         )}
@@ -209,6 +212,67 @@ export default function Record({ active }: { active: boolean }) {
         />
       )}
     </>
+  );
+}
+
+/** Distance-goal picker + live projected finish (elapsed + remaining ÷ pace). */
+function GoalCard({ elapsed, miles, goalMiles }: { elapsed: number; miles: number; goalMiles: number | null }) {
+  const goal = goalMiles;
+  const paceSecPerMi = miles > 0.05 && elapsed > 0 ? elapsed / miles : 0;
+  const remaining = goal ? Math.max(0, goal - miles) : 0;
+  const reached = goal != null && miles >= goal;
+  const projected = goal && paceSecPerMi > 0 ? Math.round(elapsed + remaining * paceSecPerMi) : 0;
+  const pct = goal ? Math.min(1, miles / goal) : 0;
+
+  return (
+    <div className="card-pad">
+      <div className="flex items-center justify-between mb-2">
+        <span className="label">Distance goal</span>
+        {goal != null && (
+          <button className="text-[11px] font-bold text-dim hover:text-ink" onClick={() => trackerSetGoal(null)}>
+            Clear
+          </button>
+        )}
+      </div>
+      <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+        {RACE_DISTANCES.map((d) => {
+          const on = goal != null && Math.abs(goal - d.miles) < 0.01;
+          return (
+            <button
+              key={d.label}
+              onClick={() => trackerSetGoal(on ? null : d.miles)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold border transition-colors ${
+                on ? 'border-brand bg-brand text-white' : 'border-line text-dim hover:text-ink'
+              }`}
+            >
+              {d.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {goal != null && (
+        <div className="mt-3 pt-3 border-t border-line">
+          <div className="flex justify-between text-[11px] text-dim mb-1 nums">
+            <span>{miles.toFixed(2)} / {goal.toFixed(2)} mi</span>
+            <span>{reached ? 'Goal reached! 🎉' : `${remaining.toFixed(2)} mi to go`}</span>
+          </div>
+          <div className="h-2 rounded-full bg-paper overflow-hidden">
+            <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${pct * 100}%` }} />
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-3 text-center">
+            <div>
+              <div className="label">Est. finish</div>
+              <div className="stat-num text-2xl mt-0.5">{reached ? fmtClock(elapsed) : projected > 0 ? fmtClock(projected) : '—'}</div>
+            </div>
+            <div>
+              <div className="label">At current pace</div>
+              <div className="stat-num text-2xl mt-0.5">{paceSecPerMi > 0 ? `${paceFor(elapsed, miles)}` : '—'}<span className="text-dim text-xs font-bold">/mi</span></div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

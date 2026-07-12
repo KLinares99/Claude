@@ -2,6 +2,16 @@
 
 export type LatLng = [number, number];
 
+/** Standard race distances (miles) for the live goal + estimated finish. */
+export const RACE_DISTANCES: { label: string; miles: number }[] = [
+  { label: '5K', miles: 3.10686 },
+  { label: '10K', miles: 6.21371 },
+  { label: '15K', miles: 9.32057 },
+  { label: '10 mi', miles: 10 },
+  { label: 'Half', miles: 13.1094 },
+  { label: 'Marathon', miles: 26.2188 }
+];
+
 export function fmtTime(totalSeconds: number): string {
   const s = Math.max(0, Math.round(totalSeconds));
   const m = Math.floor(s / 60);

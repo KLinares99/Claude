@@ -1,8 +1,12 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import { Flame, Plus, ChevronRight, Heart } from 'lucide-react';
-import { useStore, weekStats, weekByDay, computeStreak, uid, type Activity } from '../lib/storage';
+import { Flame, Plus, ChevronRight, Heart, Trophy, Utensils, Lock } from 'lucide-react';
+import {
+  useStore, weekStats, weekByDay, computeStreak, raceBests, weekCalories, uid,
+  type Activity
+} from '../lib/storage';
 import { syncSubscribe, syncGet, toggleKudos } from '../lib/sync';
 import { fmtClock, paceFor, fmtRelDate, defaultRunName } from '../lib/run';
+import { dayTotals, calorieTarget, localDateISO } from '../lib/nutrition';
 import RoutePreview from '../components/ui/RoutePreview';
 import Mascot from '../components/Mascot';
 import ActivityDetail from './ActivityDetail';
@@ -109,6 +113,16 @@ export default function Home() {
         )}
       </div>
 
+      {/* race-distance best efforts */}
+      <RaceDistancesCard activities={data.activities} />
+
+      {/* calorie intake summary */}
+      <CalorieCard
+        entries={data.nutrition.entries}
+        profile={data.nutrition.profile}
+        weightLbs={data.settings.weightLbs}
+      />
+
       {/* feed */}
       <div className="flex items-center justify-between px-1">
         <h2 className="font-black text-base">Activities</h2>
@@ -200,6 +214,154 @@ function WeekStat({ label, value, unit }: { label: string; value: string; unit?:
         {value}
         {unit && <span className="text-dim text-xs font-bold"> {unit}</span>}
       </div>
+    </div>
+  );
+}
+
+/** Best time per standard race distance — a Strava-style PR "graph". Bars are
+ *  scaled by pace so your strongest distance reads fullest; unrun distances
+ *  show locked. */
+function RaceDistancesCard({ activities }: { activities: Activity[] }) {
+  const bests = useMemo(() => raceBests(activities), [activities]);
+  const unlocked = bests.filter((b) => b.seconds != null);
+  // scale bars by pace (sec/mi): fastest distance = full bar
+  const paces = unlocked.map((b) => (b.seconds as number) / b.miles);
+  const fastest = paces.length ? Math.min(...paces) : 1;
+  const slowest = paces.length ? Math.max(...paces) : 1;
+
+  return (
+    <div className="card-pad">
+      <div className="flex items-center gap-2 mb-3">
+        <Trophy size={16} className="text-brand" />
+        <h2 className="font-black text-base">Race distances</h2>
+      </div>
+      {unlocked.length === 0 ? (
+        <p className="text-sm text-dim">Log a run and your best 5K, 10K and beyond will show up here.</p>
+      ) : (
+        <div className="space-y-2.5">
+          {bests.map((b) => {
+            const has = b.seconds != null;
+            const pace = has ? (b.seconds as number) / b.miles : 0;
+            // faster pace → fuller bar; single distance → full bar
+            const pct = has
+              ? slowest === fastest
+                ? 1
+                : 0.35 + 0.65 * ((slowest - pace) / (slowest - fastest))
+              : 0;
+            return (
+              <div key={b.label} className="flex items-center gap-3">
+                <span className="w-12 text-sm font-black shrink-0">{b.label}</span>
+                <div className="flex-1 h-6 rounded-lg bg-paper overflow-hidden">
+                  {has && (
+                    <div
+                      className="h-full bg-brand/85 rounded-lg transition-all"
+                      style={{ width: `${Math.max(10, pct * 100)}%` }}
+                    />
+                  )}
+                </div>
+                {has ? (
+                  <span className="w-24 text-right shrink-0">
+                    <span className="text-sm font-black nums">{fmtClock(b.seconds as number)}</span>
+                    <span className="block text-[10px] text-dim nums">
+                      {fmtClock(pace)}/mi{b.exact ? '' : ' est'}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="w-24 text-right shrink-0 text-faint flex items-center justify-end gap-1">
+                    <Lock size={11} /> <span className="text-[11px] font-bold">Locked</span>
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Today's calorie intake vs target + a 7-day intake strip. */
+function CalorieCard({
+  entries, profile, weightLbs
+}: {
+  entries: import('../lib/nutrition').FoodEntry[];
+  profile: import('../lib/nutrition').NutritionProfile | null;
+  weightLbs: number;
+}) {
+  const today = localDateISO();
+  const eaten = useMemo(() => dayTotals(entries, today).calories, [entries, today]);
+  const target = profile ? calorieTarget(profile, weightLbs) : null;
+  const week = useMemo(() => weekCalories(entries), [entries]);
+  const maxCal = Math.max(...week.map((d) => d.calories), target ?? 1, 1);
+  const logged = week.some((d) => d.calories > 0);
+
+  return (
+    <div className="card-pad">
+      <div className="flex items-center gap-2 mb-3">
+        <Utensils size={16} className="text-brand" />
+        <h2 className="font-black text-base">Nutrition today</h2>
+      </div>
+
+      {!logged && eaten === 0 ? (
+        <p className="text-sm text-dim">Log meals in the Nutrition tab to see your calories here.</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <WeekStat label="Eaten" value={`${eaten}`} unit="kcal" />
+            {target != null ? (
+              <>
+                <WeekStat label="Target" value={`${target}`} unit="kcal" />
+                <WeekStat
+                  label={eaten > target ? 'Over' : 'Left'}
+                  value={`${Math.abs(target - eaten)}`}
+                  unit="kcal"
+                />
+              </>
+            ) : (
+              <div className="col-span-2 flex items-center">
+                <span className="text-[11px] text-dim">Set your goals in Nutrition for a daily target.</span>
+              </div>
+            )}
+          </div>
+
+          {target != null && (
+            <div className="mt-3">
+              <div className="h-2 rounded-full bg-paper overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${eaten > target ? 'bg-bad' : 'bg-brand'}`}
+                  style={{ width: `${Math.min(1, target > 0 ? eaten / target : 0) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 7-day intake strip */}
+          <div className="grid grid-cols-7 gap-1.5 mt-4">
+            {week.map((d, i) => (
+              <div key={i} className="flex flex-col items-center gap-1">
+                <div className="w-full h-14 rounded-lg bg-paper flex items-end overflow-hidden">
+                  {d.calories > 0 && (
+                    <div
+                      className={`w-full rounded-lg transition-all ${
+                        target != null && d.calories > target ? 'bg-bad/70' : 'bg-brand/70'
+                      }`}
+                      style={{ height: `${Math.max(12, (d.calories / maxCal) * 100)}%` }}
+                      title={`${d.calories} kcal`}
+                    />
+                  )}
+                </div>
+                <span
+                  className={`w-6 h-6 flex items-center justify-center rounded-full text-[11px] font-bold ${
+                    d.isToday ? 'bg-ink text-white' : d.isFuture ? 'text-faint' : 'text-dim'
+                  }`}
+                >
+                  {d.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

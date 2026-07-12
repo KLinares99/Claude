@@ -111,15 +111,15 @@ export default function FoodSearch({
           {q.trim().length >= 2 && (
             <>
               <div className="label pt-3 flex items-center gap-1.5">
-                <Globe size={12} /> Open Food Facts
+                <Globe size={12} /> More foods (USDA + Open Food Facts)
                 {onlineState === 'loading' && <Loader2 size={12} className="animate-spin" />}
               </div>
               {onlineState === 'error' ? (
-                <p className="text-xs text-dim py-2">Couldn't reach the online database — check your connection, or use Manual.</p>
+                <p className="text-xs text-dim py-2">Couldn't reach the online databases — check your connection, or use Manual.</p>
               ) : online.length > 0 ? (
                 <div className="divide-y divide-line">
                   {online.map((f, i) => (
-                    <Row key={`o-${i}`} food={{ ...f, source: 'db' }} onPick={onPick} onSave={onSave} />
+                    <Row key={`o-${i}`} food={{ ...f, source: 'db' }} tag={f.src} onPick={onPick} onSave={onSave} />
                   ))}
                 </div>
               ) : onlineState === 'idle' ? (
@@ -134,16 +134,24 @@ export default function FoodSearch({
 }
 
 function Row({
-  food, onPick, onSave
+  food, tag, onPick, onSave
 }: {
   food: PickableFood;
+  tag?: 'usda' | 'off';
   onPick: (f: PickableFood) => void;
   onSave?: (f: PickableFood) => void;
 }) {
   return (
     <div className="flex items-center gap-2 py-2.5">
       <button className="flex-1 text-left min-w-0" onClick={() => onPick(food)}>
-        <div className="text-sm font-semibold truncate">{food.name}</div>
+        <div className="text-sm font-semibold truncate flex items-center gap-1.5">
+          <span className="truncate">{food.name}</span>
+          {tag && (
+            <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-faint border border-line rounded px-1 py-px">
+              {tag === 'usda' ? 'USDA' : 'OFF'}
+            </span>
+          )}
+        </div>
         <div className="text-[11px] text-dim nums">
           {food.serving} · {food.calories} kcal · P{food.protein} C{food.carbs} F{food.fat}
         </div>

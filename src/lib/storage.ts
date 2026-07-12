@@ -5,7 +5,7 @@
  * become Activities, so no history is lost.
  */
 import { useCallback, useEffect, useState } from 'react';
-import type { LatLng } from './run';
+import { RACE_DISTANCES, type LatLng } from './run';
 import type { FoodEntry, NutritionProfile, SavedMeal } from './nutrition';
 
 export const STORAGE_KEY = 'runner:v1';
@@ -314,4 +314,48 @@ export function bestEfforts(activities: Activity[]) {
     }
   }
   return { totalMiles, totalSeconds, count: activities.length, longest, fastestPace, fastestMileSec };
+}
+
+export interface RaceBest {
+  label: string;
+  miles: number;
+  seconds: number | null; // best (fastest) projected time, null if never run that far
+  exact: boolean;         // true when a run's distance closely matched (not just projected)
+}
+
+/**
+ * Best effort per standard race distance (5K, 10K, …) for the Home dashboard.
+ * A run "unlocks" a distance once it covers at least that far; the time is the
+ * fastest run's average pace projected onto the exact distance.
+ */
+export function raceBests(activities: Activity[]): RaceBest[] {
+  return RACE_DISTANCES.map((d) => {
+    let bestSec: number | null = null;
+    let exact = false;
+    for (const a of activities) {
+      if (a.miles <= 0 || a.miles + 0.03 < d.miles) continue;
+      const projected = (a.seconds / a.miles) * d.miles;
+      if (bestSec === null || projected < bestSec) {
+        bestSec = projected;
+        exact = Math.abs(a.miles - d.miles) < 0.2;
+      }
+    }
+    return { label: d.label, miles: d.miles, seconds: bestSec, exact };
+  });
+}
+
+/** Per-day calorie totals for the current week (Mon–Sun) for the Home dashboard. */
+export function weekCalories(entries: FoodEntry[], now = new Date()) {
+  const start = mondayOf(now);
+  const todayKey = localDay(now.toISOString());
+  const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  return labels.map((label, i) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + i);
+    const key = `${day.getFullYear()}-${(day.getMonth() + 1).toString().padStart(2, '0')}-${day.getDate().toString().padStart(2, '0')}`;
+    const calories = entries
+      .filter((e) => e.date === key)
+      .reduce((s, e) => s + Math.round(e.calories * e.servings), 0);
+    return { label, calories, isToday: key === todayKey, isFuture: day > now };
+  });
 }

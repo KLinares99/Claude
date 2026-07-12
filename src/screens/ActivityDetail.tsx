@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { X, Trash2, Pencil, Check, Share2 } from 'lucide-react';
+import { X, Trash2, Pencil, Check, Share2, Play, Square } from 'lucide-react';
 import { useStore, type Activity } from '../lib/storage';
 import { deleteRemoteActivity } from '../lib/sync';
-import { fmtClock, paceFor, fmtRelDate, caloriesFor } from '../lib/run';
+import { fmtClock, paceFor, fmtRelDate, caloriesFor, haversineMeters, type LatLng } from '../lib/run';
 import { toast } from '../lib/toast';
 import ShareCard from './ShareCard';
 
@@ -17,8 +17,14 @@ export default function ActivityDetail({
   const [editing, setEditing] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [name, setName] = useState(activity.name);
+  const [flying, setFlying] = useState(false);
   const mapDiv = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
+  const baseLine = useRef<L.Polyline | null>(null);
+  // flyover animation handles
+  const rafRef = useRef<number | null>(null);
+  const flyMarker = useRef<L.CircleMarker | null>(null);
+  const flyTrail = useRef<L.Polyline | null>(null);
 
   useEffect(() => {
     if (!mapDiv.current || map.current || activity.route.length < 2) return;
@@ -39,11 +45,82 @@ export default function ActivityDetail({
     L.circleMarker(activity.route[activity.route.length - 1], { radius: 6, color: '#fff', weight: 2, fillColor: '#16181D', fillOpacity: 1 }).addTo(m);
     m.fitBounds(line.getBounds(), { padding: [24, 24] });
     map.current = m;
+    baseLine.current = line;
     return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
       m.remove();
       map.current = null;
+      baseLine.current = null;
+      flyMarker.current = null;
+      flyTrail.current = null;
     };
   }, [activity]);
+
+  /** Reset the map back to the full-route overview and tear down the flyover. */
+  const endFlyover = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    flyMarker.current?.remove();
+    flyTrail.current?.remove();
+    flyMarker.current = null;
+    flyTrail.current = null;
+    const m = map.current;
+    if (m) {
+      baseLine.current?.setStyle({ opacity: 0.95 });
+      if (baseLine.current) m.fitBounds(baseLine.current.getBounds(), { padding: [24, 24] });
+    }
+    setFlying(false);
+  };
+
+  /** Strava-style "drone" flyover: sweep a marker along the route at constant
+   *  speed, drawing the trail and panning the (zoomed-in) map to follow. */
+  const startFlyover = () => {
+    const m = map.current;
+    const route = activity.route;
+    if (!m || route.length < 2 || flying) return;
+    setFlying(true);
+
+    // cumulative distance so the marker moves at a steady real-world speed
+    const cum: number[] = [0];
+    for (let i = 1; i < route.length; i++) {
+      cum.push(cum[i - 1] + haversineMeters(route[i - 1] as LatLng, route[i] as LatLng));
+    }
+    const total = cum[cum.length - 1] || 1;
+    const DURATION = Math.min(18000, Math.max(6000, route.length * 90));
+
+    baseLine.current?.setStyle({ opacity: 0.25 });
+    const trail = L.polyline([route[0]] as L.LatLngExpression[], { color: '#FC4C02', weight: 6, opacity: 1 }).addTo(m);
+    const marker = L.circleMarker(route[0], {
+      radius: 8, color: '#fff', weight: 3, fillColor: '#FC4C02', fillOpacity: 1
+    }).addTo(m);
+    flyTrail.current = trail;
+    flyMarker.current = marker;
+
+    m.setView(route[0] as L.LatLngExpression, 16, { animate: true });
+    const t0 = performance.now();
+    const step = (now: number) => {
+      const p = Math.min(1, (now - t0) / DURATION);
+      const dist = p * total;
+      let i = 1;
+      while (i < cum.length && cum[i] < dist) i++;
+      const i0 = Math.max(0, i - 1);
+      const seg = cum[i] - cum[i0] || 1;
+      const f = Math.min(1, (dist - cum[i0]) / seg);
+      const a = route[i0];
+      const b = route[Math.min(i, route.length - 1)];
+      const head: LatLng = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+      marker.setLatLng(head as L.LatLngExpression);
+      trail.setLatLngs([...route.slice(0, i0 + 1), head] as L.LatLngExpression[]);
+      m.panTo(head as L.LatLngExpression, { animate: false });
+      if (p < 1) {
+        rafRef.current = requestAnimationFrame(step);
+      } else {
+        window.setTimeout(endFlyover, 700);
+      }
+    };
+    rafRef.current = requestAnimationFrame(step);
+  };
 
   const saveName = () => {
     const clean = name.trim();
@@ -121,8 +198,16 @@ export default function ActivityDetail({
         {activity.route.length > 1 && (
           // isolate traps leaflet's internal z-indexes (200-800) so the map
           // can't paint over the sticky header or the share modal
-          <div className="card !p-0 overflow-hidden isolate">
+          <div className="card !p-0 overflow-hidden isolate relative">
             <div ref={mapDiv} className="w-full h-64" />
+            <button
+              onClick={flying ? endFlyover : startFlyover}
+              className="absolute bottom-3 right-3 z-[500] inline-flex items-center gap-1.5 rounded-full bg-ink/90 text-white pl-3 pr-4 py-2 text-xs font-black shadow-lg backdrop-blur active:scale-95 transition-transform"
+              aria-label={flying ? 'Stop flyover' : 'Play flyover'}
+            >
+              {flying ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+              {flying ? 'Stop' : 'Flyover'}
+            </button>
           </div>
         )}
 
