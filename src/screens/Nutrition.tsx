@@ -7,11 +7,13 @@ import {
   exerciseCalories, localDateISO, shiftDate, ACTIVITY_LEVELS, GOALS
 } from '../lib/nutrition';
 import { fmtRelDate } from '../lib/run';
+import { accentHex } from '../lib/theme';
 import AddFoodSheet from './AddFood';
 import { toast } from '../lib/toast';
 
 export default function Nutrition() {
   const { data, update } = useStore();
+  const accent = accentHex(data.settings.accent);
   const [date, setDate] = useState(localDateISO());
   const [addingTo, setAddingTo] = useState<Meal | null>(null);
   const [goalsOpen, setGoalsOpen] = useState(false);
@@ -106,7 +108,7 @@ export default function Nutrition() {
       {/* macros */}
       <div className="card-pad">
         <h2 className="font-black mb-3">Macros</h2>
-        <MacroBar label="Protein" value={totals.protein} target={macros.protein} color="#FC4C02" />
+        <MacroBar label="Protein" value={totals.protein} target={macros.protein} color={accent} />
         <MacroBar label="Carbs" value={totals.carbs} target={macros.carbs} color="#16A34A" />
         <MacroBar label="Fat" value={totals.fat} target={macros.fat} color="#EAB308" />
       </div>

@@ -2,6 +2,11 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
+import { getData } from './lib/storage'
+import { applyAccent } from './lib/theme'
+
+// Paint the saved accent before first render so there's no orange flash.
+applyAccent(getData().settings.accent)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

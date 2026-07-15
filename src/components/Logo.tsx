@@ -3,7 +3,7 @@
 export default function Logo({ size = 28 }: { size?: number }) {
   return (
     <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
-      <rect width="48" height="48" rx="12" fill="#FC4C02" />
+      <rect width="48" height="48" rx="12" className="fill-brand" />
       <path
         d="M12 33 L21 24 L27 30 L36 15"
         stroke="#fff"

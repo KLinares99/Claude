@@ -3,11 +3,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        // RUNNER palette — clean light UI with a single bold accent
+        // RUNNER palette — clean light UI with a single bold accent.
+        // The accent is CSS-variable driven (see src/lib/theme.ts) so users can
+        // recolor the whole app; channels keep Tailwind's /opacity modifiers.
         brand: {
-          DEFAULT: '#FC4C02',
-          dark: '#DE4302',
-          soft: '#FFF0E8'
+          DEFAULT: 'rgb(var(--brand) / <alpha-value>)',
+          dark: 'rgb(var(--brand-dark) / <alpha-value>)',
+          soft: 'rgb(var(--brand-soft) / <alpha-value>)'
         },
         ink: '#16181D',
         dim: '#6B7280',

@@ -8,6 +8,7 @@ import {
   trackerFinish, trackerDiscard, trackerSetGoal
 } from '../lib/tracker';
 import { useStore } from '../lib/storage';
+import { accentHex } from '../lib/theme';
 import { toast } from '../lib/toast';
 import Mascot from '../components/Mascot';
 import Intervals from './Intervals';
@@ -33,6 +34,8 @@ export default function Record({ active }: { active: boolean }) {
   const line = useRef<L.Polyline | null>(null);
   const dot = useRef<L.CircleMarker | null>(null);
 
+  const accent = accentHex(data.settings.accent);
+
   // lazy-init the map the first time the screen is actually visible
   // (leaflet can't measure a display:none container), then keep it forever
   useEffect(() => {
@@ -46,16 +49,22 @@ export default function Record({ active }: { active: boolean }) {
         attribution: '© OpenStreetMap'
       }).addTo(m);
       line.current = L.polyline(trackerGet().route as L.LatLngExpression[], {
-        color: '#FC4C02', weight: 5, opacity: 0.95
+        color: accent, weight: 5, opacity: 0.95
       }).addTo(m);
       dot.current = L.circleMarker(trackerGet().lastPos ?? DEFAULT_CENTER, {
-        radius: 7, color: '#ffffff', weight: 2.5, fillColor: '#FC4C02', fillOpacity: 1
+        radius: 7, color: '#ffffff', weight: 2.5, fillColor: accent, fillOpacity: 1
       }).addTo(m);
       map.current = m;
     }
     const t = setTimeout(() => map.current?.invalidateSize(), 80);
     return () => clearTimeout(t);
-  }, [active, mode]);
+  }, [active, mode, accent]);
+
+  // recolor the live map if the accent changes
+  useEffect(() => {
+    line.current?.setStyle({ color: accent });
+    dot.current?.setStyle({ fillColor: accent });
+  }, [accent]);
 
   // reflect global tracker state onto the map
   useEffect(() => {

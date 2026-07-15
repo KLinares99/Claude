@@ -118,6 +118,7 @@ export type CardBackground =
 export interface StoryCardOptions {
   background: CardBackground;
   routeColor?: string;
+  accent?: string;   // brand color for the logo tile (defaults to BRAND)
 }
 
 const CARD_W = 1080;
@@ -159,7 +160,7 @@ export function renderStoryCard(canvas: HTMLCanvasElement, activity: Activity, o
   // no route → nudge the whole block down so the layout stays balanced
   let y = hasRoute ? 250 : 420;
 
-  drawLogoRow(ctx, cx, y);
+  drawLogoRow(ctx, cx, y, opts.accent ?? BRAND);
 
   // huge distance
   y += hasRoute ? 330 : 350;
@@ -204,6 +205,162 @@ export function renderStoryCard(canvas: HTMLCanvasElement, activity: Activity, o
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
   ctx.font = `600 36px ${FONT}`;
   ctx.fillText(dateStr, cx, CARD_H - 96);
+}
+
+// ---- flyover video ----------------------------------------------------------
+
+const VID_W = 1080;
+const VID_H = 1920;
+
+/** Draw one frame of the "drone flyover": the route drawing in up to `progress`
+ *  (0–1) with a moving head dot, over live distance/time/pace readouts. */
+export function renderFlyoverFrame(
+  canvas: HTMLCanvasElement, activity: Activity, progress: number, accent: string = BRAND
+) {
+  if (canvas.width !== VID_W) canvas.width = VID_W;
+  if (canvas.height !== VID_H) canvas.height = VID_H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const p = Math.max(0, Math.min(1, progress));
+
+  // dark background
+  const bg = ctx.createLinearGradient(0, 0, VID_W, VID_H);
+  bg.addColorStop(0, '#1B1D23');
+  bg.addColorStop(1, '#0C0D10');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, VID_W, VID_H);
+
+  const cx = VID_W / 2;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+
+  drawLogoRow(ctx, cx, 230, accent);
+
+  // route band
+  const bandY = 420;
+  const bandH = 900;
+  const pts = projectRoute(activity.route, 150, bandY, VID_W - 300, bandH);
+
+  // full route, faint
+  strokeRoute(ctx, pts, 'rgba(255,255,255,0.16)', 10);
+
+  // travelled portion up to p (interpolate the head between vertices)
+  if (pts.length >= 2 && p > 0) {
+    const fIdx = p * (pts.length - 1);
+    const i = Math.floor(fIdx);
+    const frac = fIdx - i;
+    const drawn = pts.slice(0, i + 1);
+    let head = pts[i];
+    if (i < pts.length - 1) {
+      head = [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * frac, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * frac];
+      drawn.push(head);
+    }
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 24;
+    strokeRoute(ctx, drawn, accent, 14);
+    ctx.shadowBlur = 0;
+    // head dot
+    ctx.beginPath();
+    ctx.arc(head[0], head[1], 18, 0, Math.PI * 2);
+    ctx.fillStyle = accent;
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#fff';
+    ctx.stroke();
+  }
+
+  // live readouts
+  const miles = activity.miles * p;
+  const secs = Math.round(activity.seconds * p);
+  let y = bandY + bandH + 190;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `900 220px ${FONT}`;
+  ctx.fillText(miles.toFixed(2), cx, y);
+  y += 78;
+  drawLabel(ctx, 'MILES', cx, y, 38);
+
+  y += 170;
+  const colL = VID_W * 0.3;
+  const colR = VID_W * 0.7;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `800 84px ${FONT}`;
+  ctx.fillText(fmtClock(secs), colL, y);
+  ctx.fillText(`${paceFor(secs, miles)}/mi`, colR, y);
+  y += 60;
+  drawLabel(ctx, 'TIME', colL, y, 28);
+  drawLabel(ctx, 'PACE', colR, y, 28);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.font = `600 46px ${FONT}`;
+  ctx.fillText(activity.name, cx, VID_H - 120);
+}
+
+/** Best supported recording MIME for this browser (mp4 on Safari, webm elsewhere). */
+export function flyoverMime(): { mime: string; ext: string } | null {
+  if (typeof MediaRecorder === 'undefined') return null;
+  const candidates = [
+    { mime: 'video/mp4;codecs=h264', ext: 'mp4' },
+    { mime: 'video/mp4', ext: 'mp4' },
+    { mime: 'video/webm;codecs=vp9', ext: 'webm' },
+    { mime: 'video/webm;codecs=vp8', ext: 'webm' },
+    { mime: 'video/webm', ext: 'webm' }
+  ];
+  for (const c of candidates) {
+    try { if (MediaRecorder.isTypeSupported(c.mime)) return c; } catch { /* try next */ }
+  }
+  return null;
+}
+
+/**
+ * Record the flyover to a video Blob by animating frames onto an offscreen
+ * canvas and capturing its stream. Resolves null if recording is unsupported.
+ */
+export function recordFlyoverVideo(
+  activity: Activity,
+  opts: { accent?: string; durationMs?: number; onProgress?: (p: number) => void } = {}
+): Promise<{ blob: Blob; ext: string } | null> {
+  return new Promise((resolve) => {
+    const chosen = flyoverMime();
+    if (!chosen || activity.route.length < 2) return resolve(null);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = VID_W;
+    canvas.height = VID_H;
+    renderFlyoverFrame(canvas, activity, 0, opts.accent);
+
+    const stream = canvas.captureStream(30);
+    let recorder: MediaRecorder;
+    try {
+      recorder = new MediaRecorder(stream, { mimeType: chosen.mime, videoBitsPerSecond: 8_000_000 });
+    } catch {
+      return resolve(null);
+    }
+    const chunks: BlobPart[] = [];
+    recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      resolve({ blob: new Blob(chunks, { type: chosen.mime }), ext: chosen.ext });
+    };
+
+    const duration = opts.durationMs ?? 9000;
+    const hold = 900; // linger on the finished route at the end
+    recorder.start();
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const raw = (now - t0) / duration;
+      const p = Math.min(1, raw);
+      // ease-in-out for a smoother "drone" sweep
+      const eased = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      renderFlyoverFrame(canvas, activity, eased, opts.accent);
+      opts.onProgress?.(p);
+      if (now - t0 < duration + hold) {
+        requestAnimationFrame(tick);
+      } else {
+        try { recorder.stop(); } catch { resolve(null); }
+      }
+    };
+    requestAnimationFrame(tick);
+  });
 }
 
 // ---- drawing helpers ---------------------------------------------------------
@@ -256,7 +413,7 @@ function drawLabel(ctx: CanvasRenderingContext2D, text: string, cx: number, y: n
  * route line + endpoint dot, 48-unit viewBox) plus the "RUNNER" wordmark,
  * drawn as one centered row. `cy` is the vertical center of the row.
  */
-function drawLogoRow(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+function drawLogoRow(ctx: CanvasRenderingContext2D, cx: number, cy: number, accent: string = BRAND) {
   const TILE = 78;
   const GAP = 26;
   const wordSize = 58;
@@ -271,7 +428,7 @@ function drawLogoRow(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
   const tileY = cy - TILE / 2;
 
   // tile
-  ctx.fillStyle = BRAND;
+  ctx.fillStyle = accent;
   roundedRect(ctx, left, tileY, TILE, TILE, TILE * 0.25);
   ctx.fill();
 

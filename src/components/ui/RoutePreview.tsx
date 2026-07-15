@@ -46,7 +46,7 @@ export default function RoutePreview({
       style={{ height }}
       preserveAspectRatio="xMidYMid meet"
     >
-      <polyline points={pts} fill="none" stroke="#FC4C02" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
+      <polyline points={pts} fill="none" className="stroke-brand" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
       <circle cx={sx} cy={sy} r={4} fill="#16A34A" stroke="#fff" strokeWidth={1.5} />
       <circle cx={ex} cy={ey} r={4} fill="#16181D" stroke="#fff" strokeWidth={1.5} />
     </svg>

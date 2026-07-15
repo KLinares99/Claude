@@ -1,15 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
-import { Share2, Download, Image as ImageIcon, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Share2, Download, Image as ImageIcon, X, Clapperboard, Loader2 } from 'lucide-react';
 import type { Activity } from '../lib/storage';
 import {
-  renderTransparentRoute, renderStoryCard, GRADIENTS, BRAND,
+  renderTransparentRoute, renderStoryCard, renderFlyoverFrame,
+  recordFlyoverVideo, flyoverMime, GRADIENTS, BRAND,
   type CardBackground, type GradientId
 } from '../lib/shareCard';
 import { toast } from '../lib/toast';
 
-type Mode = 'route' | 'card';
-
-const ROUTE_COLORS = [BRAND, '#FFFFFF', '#16181D'];
+type Mode = 'route' | 'card' | 'video';
 
 /** Checkerboard so the transparent export actually *looks* transparent. */
 const CHECKER: React.CSSProperties = {
@@ -20,15 +19,21 @@ const CHECKER: React.CSSProperties = {
  * Share modal — exports an activity as a transparent route-outline PNG or a
  * 9:16 story card. Opens above ActivityDetail (itself a z-50 overlay).
  */
-export default function ShareCard({ activity, onClose }: { activity: Activity; onClose: () => void }) {
+export default function ShareCard({
+  activity, onClose, accent = BRAND
+}: { activity: Activity; onClose: () => void; accent?: string }) {
   const hasRoute = activity.route.length > 1;
   const [mode, setMode] = useState<Mode>(hasRoute ? 'route' : 'card');
-  const [routeColor, setRouteColor] = useState(BRAND);
+  const [routeColor, setRouteColor] = useState(accent);
   const [bg, setBg] = useState<CardBackground>({ type: 'gradient', id: 'orange' });
   const [canShare, setCanShare] = useState(false);
+  const [videoPct, setVideoPct] = useState<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoUrl = useRef<string | null>(null);
+
+  const ROUTE_COLORS = useMemo(() => [accent, '#FFFFFF', '#16181D'], [accent]);
+  const videoSupported = useMemo(() => hasRoute && flyoverMime() !== null, [hasRoute]);
 
   // feature-detect file sharing (some browsers throw instead of returning false)
   useEffect(() => {
@@ -45,8 +50,9 @@ export default function ShareCard({ activity, onClose }: { activity: Activity; o
     const canvas = canvasRef.current;
     if (!canvas) return;
     if (mode === 'route') renderTransparentRoute(canvas, activity.route, routeColor);
-    else renderStoryCard(canvas, activity, { background: bg });
-  }, [mode, routeColor, bg, activity]);
+    else if (mode === 'video') renderFlyoverFrame(canvas, activity, 0.62, accent);
+    else renderStoryCard(canvas, activity, { background: bg, accent });
+  }, [mode, routeColor, bg, activity, accent]);
 
   // release any picked-photo object URL when the modal unmounts
   useEffect(() => () => {
@@ -103,6 +109,43 @@ export default function ShareCard({ activity, onClose }: { activity: Activity; o
     toast('Image saved');
   };
 
+  const exportVideo = async () => {
+    if (videoPct !== null) return;
+    setVideoPct(0);
+    try {
+      const result = await recordFlyoverVideo(activity, {
+        accent,
+        onProgress: (p) => setVideoPct(Math.round(p * 100))
+      });
+      if (!result) {
+        toast("This browser can't record video — try the story card instead");
+        return;
+      }
+      const name = `runner-flyover-${activity.date.slice(0, 10)}.${result.ext}`;
+      const file = new File([result.blob], name, { type: result.blob.type });
+      // prefer the native share sheet (saves straight to Photos on mobile)
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: activity.name });
+          return;
+        } catch (err) {
+          if ((err as Error)?.name === 'AbortError') return;
+        }
+      }
+      const url = URL.createObjectURL(result.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 8000);
+      toast('Flyover video saved');
+    } catch {
+      toast("Couldn't create the video");
+    } finally {
+      setVideoPct(null);
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center"
@@ -122,24 +165,34 @@ export default function ShareCard({ activity, onClose }: { activity: Activity; o
         </div>
 
         {/* mode toggle */}
-        <div className="card p-1 grid grid-cols-2 gap-1">
+        <div className="card p-1 grid grid-cols-3 gap-1">
           <button
             onClick={() => setMode('route')}
             disabled={!hasRoute}
             title={hasRoute ? undefined : 'No GPS route on this activity'}
-            className={`rounded-xl py-2 text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`rounded-xl py-2 text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
               mode === 'route' ? 'bg-ink text-white' : 'text-dim hover:text-ink'
             }`}
           >
-            Transparent route
+            Route PNG
           </button>
           <button
             onClick={() => setMode('card')}
-            className={`rounded-xl py-2 text-sm font-bold transition-colors ${
+            className={`rounded-xl py-2 text-xs font-bold transition-colors ${
               mode === 'card' ? 'bg-ink text-white' : 'text-dim hover:text-ink'
             }`}
           >
             Story card
+          </button>
+          <button
+            onClick={() => setMode('video')}
+            disabled={!videoSupported}
+            title={videoSupported ? undefined : 'Video isn’t supported in this browser'}
+            className={`rounded-xl py-2 text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              mode === 'video' ? 'bg-ink text-white' : 'text-dim hover:text-ink'
+            }`}
+          >
+            Flyover video
           </button>
         </div>
 
@@ -156,7 +209,12 @@ export default function ShareCard({ activity, onClose }: { activity: Activity; o
         </div>
 
         {/* mode-specific options */}
-        {mode === 'route' ? (
+        {mode === 'video' ? (
+          <p className="text-xs text-dim">
+            A {activity.miles.toFixed(2)}-mi drone flyover of your route, counting up your
+            distance, time and pace. Exports a 9:16 clip perfect for stories.
+          </p>
+        ) : mode === 'route' ? (
           <div className="flex items-center gap-3">
             <span className="label">Line color</span>
             <div className="flex gap-2">
@@ -203,16 +261,26 @@ export default function ShareCard({ activity, onClose }: { activity: Activity; o
         )}
 
         {/* actions */}
-        <div className="flex gap-2">
-          {canShare && (
-            <button className="btn-primary flex-1 py-3" onClick={share}>
-              <Share2 size={18} /> Share
-            </button>
-          )}
-          <button className={`${canShare ? 'btn-ghost' : 'btn-primary'} flex-1 py-3`} onClick={save}>
-            <Download size={18} /> Save image
+        {mode === 'video' ? (
+          <button className="btn-primary w-full py-3" onClick={exportVideo} disabled={videoPct !== null}>
+            {videoPct !== null ? (
+              <><Loader2 size={18} className="animate-spin" /> Rendering… {videoPct}%</>
+            ) : (
+              <><Clapperboard size={18} /> Export flyover video</>
+            )}
           </button>
-        </div>
+        ) : (
+          <div className="flex gap-2">
+            {canShare && (
+              <button className="btn-primary flex-1 py-3" onClick={share}>
+                <Share2 size={18} /> Share
+              </button>
+            )}
+            <button className={`${canShare ? 'btn-ghost' : 'btn-primary'} flex-1 py-3`} onClick={save}>
+              <Download size={18} /> Save image
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

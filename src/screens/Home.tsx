@@ -146,6 +146,7 @@ export default function Home() {
               key={`${item.isPartner ? 'p' : 'm'}-${item.a.id}`}
               a={item.a}
               who={item.who}
+              photo={item.isPartner ? '' : data.settings.photo}
               isPartner={item.isPartner}
               hearts={hearts.length}
               iHearted={!!myId && hearts.includes(myId)}
@@ -367,10 +368,11 @@ function CalorieCard({
 }
 
 function ActivityCard({
-  a, who, isPartner, hearts, iHearted, canHeart, onHeart, onOpen
+  a, who, photo, isPartner, hearts, iHearted, canHeart, onHeart, onOpen
 }: {
   a: Activity;
   who: string;
+  photo?: string;
   isPartner: boolean;
   hearts: number;
   iHearted: boolean;
@@ -382,13 +384,17 @@ function ActivityCard({
     <button className="card w-full text-left overflow-hidden" onClick={onOpen}>
       <div className="p-4 pb-3">
         <div className="flex items-center gap-2.5">
-          <span
-            className={`w-9 h-9 rounded-full font-black flex items-center justify-center text-sm ${
-              isPartner ? 'bg-ink text-white' : 'bg-brand text-white'
-            }`}
-          >
-            {who.slice(0, 1).toUpperCase() || 'R'}
-          </span>
+          {photo ? (
+            <img src={photo} alt={who} className="w-9 h-9 rounded-full object-cover shrink-0" />
+          ) : (
+            <span
+              className={`w-9 h-9 rounded-full font-black flex items-center justify-center text-sm shrink-0 ${
+                isPartner ? 'bg-ink text-white' : 'bg-brand text-white'
+              }`}
+            >
+              {who.slice(0, 1).toUpperCase() || 'R'}
+            </span>
+          )}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold truncate">{who}</div>
             <div className="text-[11px] text-dim">{fmtRelDate(a.date)}</div>

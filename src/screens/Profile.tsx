@@ -1,20 +1,51 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { Trophy, Download, Upload, Shield } from 'lucide-react';
+import { Trophy, Download, Upload, Shield, Camera, Check } from 'lucide-react';
 import {
   useStore, weeklyMileage, bestEfforts, computeStreak, defaultData, type RunnerData
 } from '../lib/storage';
 import { fmtClock, fmtTime, paceFor } from '../lib/run';
+import { ACCENTS, accentHex } from '../lib/theme';
+import { getUsdaKey, setUsdaKey } from '../lib/foodSearch';
 import { toast } from '../lib/toast';
 import CoupleSync from './CoupleSync';
 
 export default function Profile() {
   const { data, update } = useStore();
   const fileRef = useRef<HTMLInputElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
 
+  const accent = accentHex(data.settings.accent);
   const best = bestEfforts(data.activities);
   const streak = computeStreak(data.activities);
   const weeks = weeklyMileage(data.activities, 8);
+
+  function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { toast('Photo is too large (max 8 MB)'); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      // downscale to a 256px square so localStorage isn't blown out by a full photo
+      const img = new Image();
+      img.onload = () => {
+        const S = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = S; canvas.height = S;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const side = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
+        const url = canvas.toDataURL('image/jpeg', 0.85);
+        update((d) => ({ ...d, settings: { ...d.settings, photo: url } }));
+        toast('Photo updated');
+      };
+      img.onerror = () => toast("Couldn't load that image");
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
 
   function exportData() {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -91,19 +122,60 @@ export default function Profile() {
   return (
     <div className="space-y-4">
       {/* identity */}
-      <div className="card-pad flex items-center gap-4">
-        <span className="w-16 h-16 rounded-full bg-brand text-white font-black text-2xl flex items-center justify-center">
-          {data.settings.name.slice(0, 1).toUpperCase()}
-        </span>
-        <div className="flex-1">
-          <input
-            className="text-xl font-black bg-transparent focus:outline-none w-full"
-            value={data.settings.name}
-            onChange={(e) => update((d) => ({ ...d, settings: { ...d.settings, name: e.target.value } }))}
-            aria-label="Your name"
-          />
-          <div className="text-xs text-dim">{streak > 0 ? `🔥 ${streak}-day streak` : 'Runner'}</div>
+      <div className="card-pad">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => photoRef.current?.click()}
+            className="relative w-16 h-16 rounded-full shrink-0 overflow-hidden group"
+            aria-label="Change your photo"
+          >
+            {data.settings.photo ? (
+              <img src={data.settings.photo} alt="Your photo" className="w-full h-full object-cover" />
+            ) : (
+              <span className="w-full h-full rounded-full bg-brand text-white font-black text-2xl flex items-center justify-center">
+                {data.settings.name.slice(0, 1).toUpperCase() || 'R'}
+              </span>
+            )}
+            <span className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+              <Camera size={18} className="text-white" />
+            </span>
+          </button>
+          <div className="flex-1 min-w-0">
+            <input
+              className="text-xl font-black bg-transparent focus:outline-none w-full"
+              value={data.settings.name}
+              placeholder="Your name"
+              onChange={(e) => update((d) => ({ ...d, settings: { ...d.settings, name: e.target.value } }))}
+              aria-label="Your name"
+            />
+            <div className="text-xs text-dim">{streak > 0 ? `🔥 ${streak}-day streak` : 'Tap the photo to personalize'}</div>
+          </div>
         </div>
+
+        {/* accent color — recolors the whole app */}
+        <div className="mt-4 pt-4 border-t border-line">
+          <div className="label mb-2">App color</div>
+          <div className="flex gap-2.5">
+            {ACCENTS.map((a) => {
+              const on = (data.settings.accent || 'orange') === a.id;
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => update((d) => ({ ...d, settings: { ...d.settings, accent: a.id } }))}
+                  aria-label={a.label}
+                  title={a.label}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90 ${
+                    on ? 'ring-2 ring-offset-2 ring-ink' : ''
+                  }`}
+                  style={{ background: a.hex }}
+                >
+                  {on && <Check size={16} className="text-white" strokeWidth={3} />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={pickPhoto} />
       </div>
 
       {/* all-time totals */}
@@ -129,7 +201,7 @@ export default function Profile() {
               contentStyle={{ background: '#fff', border: '1px solid #E7E5E0', borderRadius: 10, fontSize: 12 }}
               formatter={(v: number) => [`${v} mi`, 'Distance']}
             />
-            <Bar dataKey="miles" fill="#FC4C02" radius={[5, 5, 0, 0]} maxBarSize={28} />
+            <Bar dataKey="miles" fill={accent} radius={[5, 5, 0, 0]} maxBarSize={28} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -184,6 +256,9 @@ export default function Profile() {
           />
         </SettingRow>
       </div>
+
+      {/* food database key */}
+      <UsdaKeyCard />
 
       {/* data & backup */}
       <div className="card-pad space-y-3">
@@ -242,6 +317,44 @@ function Effort({ label, value, sub }: { label: string; value: string; sub?: str
         {sub && <div className="text-[11px] text-dim">{sub}</div>}
       </div>
       <span className="stat-num text-lg">{value}</span>
+    </div>
+  );
+}
+
+/** Optional personal USDA FoodData Central key — lifts the shared DEMO_KEY
+ *  rate limit so heavy food searching never falls back to OFF-only. */
+function UsdaKeyCard() {
+  const [key, setKey] = useState(() => {
+    const k = getUsdaKey();
+    return k === 'DEMO_KEY' ? '' : k;
+  });
+
+  const save = () => {
+    setUsdaKey(key);
+    toast(key.trim() ? 'Food database key saved' : 'Using the free shared key');
+  };
+
+  return (
+    <div className="card-pad space-y-3">
+      <h2 className="font-black">Food database key</h2>
+      <p className="text-xs text-dim leading-relaxed">
+        Food search already works out of the box on a shared key. If searches ever
+        say they can't reach the database, it's the shared key hitting its hourly
+        limit — grab your own free key from{' '}
+        <a href="https://api.data.gov/signup/" target="_blank" rel="noreferrer" className="text-brand font-semibold underline">
+          api.data.gov/signup
+        </a>{' '}
+        (takes a minute) and paste it here.
+      </p>
+      <div className="flex gap-2">
+        <input
+          className="input flex-1"
+          placeholder="Paste USDA key (optional)"
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+        />
+        <button className="btn-primary" onClick={save}>Save</button>
+      </div>
     </div>
   );
 }

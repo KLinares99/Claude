@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import Nav, { type Tab } from './components/Nav';
 import Logo from './components/Logo';
 import Home from './screens/Home';
@@ -8,6 +8,8 @@ import Profile from './screens/Profile';
 import Toast from './components/ui/Toast';
 import QuoteOfDay from './components/QuoteOfDay';
 import { trackerSubscribe, trackerGet } from './lib/tracker';
+import { useStore } from './lib/storage';
+import { applyAccent } from './lib/theme';
 import { fmtClock, metersToMiles } from './lib/run';
 
 const titles: Record<Tab, string> = {
@@ -20,7 +22,13 @@ const titles: Record<Tab, string> = {
 export default function App() {
   const [tab, setTab] = useState<Tab>('home');
   const tracker = useSyncExternalStore(trackerSubscribe, trackerGet);
+  const { data } = useStore();
   const recording = tracker.phase !== 'idle';
+
+  // recolor the whole app whenever the accent setting changes
+  useEffect(() => {
+    applyAccent(data.settings.accent);
+  }, [data.settings.accent]);
 
   return (
     <div className="min-h-screen bg-paper">

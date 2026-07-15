@@ -5,6 +5,7 @@ import { X, Trash2, Pencil, Check, Share2, Play, Square } from 'lucide-react';
 import { useStore, type Activity } from '../lib/storage';
 import { deleteRemoteActivity } from '../lib/sync';
 import { fmtClock, paceFor, fmtRelDate, caloriesFor, haversineMeters, type LatLng } from '../lib/run';
+import { accentHex } from '../lib/theme';
 import { toast } from '../lib/toast';
 import ShareCard from './ShareCard';
 
@@ -14,6 +15,7 @@ export default function ActivityDetail({
   activity, onClose, readOnly = false
 }: { activity: Activity; onClose: () => void; readOnly?: boolean }) {
   const { data, update } = useStore();
+  const accent = accentHex(data.settings.accent);
   const [editing, setEditing] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [name, setName] = useState(activity.name);
@@ -39,7 +41,7 @@ export default function ActivityDetail({
       attribution: '© OpenStreetMap'
     }).addTo(m);
     const line = L.polyline(activity.route as L.LatLngExpression[], {
-      color: '#FC4C02', weight: 5, opacity: 0.95
+      color: accent, weight: 5, opacity: 0.95
     }).addTo(m);
     L.circleMarker(activity.route[0], { radius: 6, color: '#fff', weight: 2, fillColor: '#16A34A', fillOpacity: 1 }).addTo(m);
     L.circleMarker(activity.route[activity.route.length - 1], { radius: 6, color: '#fff', weight: 2, fillColor: '#16181D', fillOpacity: 1 }).addTo(m);
@@ -90,9 +92,9 @@ export default function ActivityDetail({
     const DURATION = Math.min(18000, Math.max(6000, route.length * 90));
 
     baseLine.current?.setStyle({ opacity: 0.25 });
-    const trail = L.polyline([route[0]] as L.LatLngExpression[], { color: '#FC4C02', weight: 6, opacity: 1 }).addTo(m);
+    const trail = L.polyline([route[0]] as L.LatLngExpression[], { color: accent, weight: 6, opacity: 1 }).addTo(m);
     const marker = L.circleMarker(route[0], {
-      radius: 8, color: '#fff', weight: 3, fillColor: '#FC4C02', fillOpacity: 1
+      radius: 8, color: '#fff', weight: 3, fillColor: accent, fillOpacity: 1
     }).addTo(m);
     flyTrail.current = trail;
     flyMarker.current = marker;
@@ -249,7 +251,7 @@ export default function ActivityDetail({
         )}
       </main>
 
-      {sharing && <ShareCard activity={activity} onClose={() => setSharing(false)} />}
+      {sharing && <ShareCard activity={activity} accent={accent} onClose={() => setSharing(false)} />}
     </div>
   );
 }

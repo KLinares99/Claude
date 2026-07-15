@@ -38,6 +38,8 @@ export interface RunnerData {
   };
   settings: {
     name: string;
+    photo: string;      // data URL of the user's avatar ('' = initial tile)
+    accent: string;     // accent/brand color id (see lib/theme)
     weightLbs: number;
     weeklyGoalMiles: number;
     runBpm: number;
@@ -49,7 +51,7 @@ export function defaultData(): RunnerData {
   return {
     activities: [],
     nutrition: { entries: [], meals: [], profile: null, apiKey: '' },
-    settings: { name: 'Runner', weightLbs: 175, weeklyGoalMiles: 10, runBpm: 170, walkBpm: 120 }
+    settings: { name: 'Runner', photo: '', accent: 'orange', weightLbs: 175, weeklyGoalMiles: 10, runBpm: 170, walkBpm: 120 }
   };
 }
 

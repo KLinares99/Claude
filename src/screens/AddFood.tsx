@@ -370,7 +370,7 @@ function MealBuilder({
       </div>
 
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" className="w-4 h-4 accent-[#FC4C02]" checked={favorite} onChange={(e) => setFavorite(e.target.checked)} />
+        <input type="checkbox" className="w-4 h-4 accent-brand" checked={favorite} onChange={(e) => setFavorite(e.target.checked)} />
         Favorite (pin to top)
       </label>
 
@@ -493,7 +493,7 @@ function AiMode({ meal, date, caloriesSoFar, onAdd }: { meal: Meal; date: string
             <label key={i} className="flex items-center gap-3 py-2.5">
               <input
                 type="checkbox"
-                className="w-5 h-5 accent-[#FC4C02]"
+                className="w-5 h-5 accent-brand"
                 checked={checked[i] ?? false}
                 onChange={(e) => setChecked((c) => c.map((v, j) => (j === i ? e.target.checked : v)))}
               />

@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* accent channels — overwritten at runtime by lib/theme applyAccent() */
+    --brand: 252 76 2;
+    --brand-dark: 222 67 2;
+    --brand-soft: 255 240 232;
+  }
   html {
     background: #f7f6f3;
   }

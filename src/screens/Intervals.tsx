@@ -7,6 +7,7 @@ import {
   intervalReset, intervalSelect, intervalToggleMetronome, intervalConfigure
 } from '../lib/intervals';
 import { useStore } from '../lib/storage';
+import { accentHex } from '../lib/theme';
 
 /** Interval workouts — run/walk cycles with a cadence metronome.
  *  All timing state lives in the global intervals store, so it survives
@@ -23,7 +24,8 @@ export default function Intervals() {
 
   const segTotal = s.mode === 'run' ? w.run : w.walk;
   const ringPct = w.walk === 0 ? s.elapsed / w.run : 1 - s.remaining / Math.max(1, segTotal);
-  const ringColor = s.mode === 'run' ? '#FC4C02' : '#16A34A';
+  const accent = accentHex(data.settings.accent);
+  const ringColor = s.mode === 'run' ? accent : '#16A34A';
   const display = w.walk === 0 ? Math.max(0, w.run - s.elapsed) : s.remaining;
 
   return (
@@ -91,7 +93,7 @@ export default function Intervals() {
         <BpmSlider
           label="Run tempo"
           value={data.settings.runBpm}
-          color="#FC4C02"
+          color={accent}
           active={s.mode === 'run' && s.running}
           onChange={(v) => update((d) => ({ ...d, settings: { ...d.settings, runBpm: v } }))}
         />
