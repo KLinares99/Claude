@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tesla Learning Hub — The Life, Mind & Inventions of Nikola Tesla</title>
+  <meta name="description" content="An interactive learning hub covering Nikola Tesla's life, inventions, patents and blueprints, writings, and his legendary visualization and dream techniques." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="brand">
+      <span class="bolt" aria-hidden="true">&#9889;</span>
+      <div>
+        <h1>Tesla Learning Hub</h1>
+        <p class="tagline">The life, mind &amp; inventions of Nikola Tesla &middot; 1856&ndash;1943</p>
+      </div>
+    </div>
+    <nav class="tabs" id="nav"></nav>
+  </header>
+
+  <main id="app" class="container" tabindex="-1"></main>
+
+  <footer class="site-footer">
+    <p>Built for learning. Historical content compiled from Tesla's own writings (<em>My Inventions</em>, 1919),
+    his patents, and the public historical record. External links go to primary sources and archives.</p>
+  </footer>
+
+  <script src="data/bio.js"></script>
+  <script src="data/timeline.js"></script>
+  <script src="data/inventions.js"></script>
+  <script src="data/patents.js"></script>
+  <script src="data/mind.js"></script>
+  <script src="data/library.js"></script>
+  <script src="data/quiz.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
