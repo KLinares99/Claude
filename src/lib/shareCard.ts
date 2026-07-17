@@ -213,9 +213,12 @@ const VID_W = 1080;
 const VID_H = 1920;
 
 /** Draw one frame of the "drone flyover": the route drawing in up to `progress`
- *  (0–1) with a moving head dot, over live distance/time/pace readouts. */
+ *  (0–1) with a moving head dot, over live distance/time/pace readouts.
+ *  `transparent` clears the background and draws the route alone (for an
+ *  overlay-friendly export), matching the transparent-route PNG aesthetic. */
 export function renderFlyoverFrame(
-  canvas: HTMLCanvasElement, activity: Activity, progress: number, accent: string = BRAND
+  canvas: HTMLCanvasElement, activity: Activity, progress: number,
+  accent: string = BRAND, transparent = false
 ) {
   if (canvas.width !== VID_W) canvas.width = VID_W;
   if (canvas.height !== VID_H) canvas.height = VID_H;
@@ -223,22 +226,25 @@ export function renderFlyoverFrame(
   if (!ctx) return;
   const p = Math.max(0, Math.min(1, progress));
 
-  // dark background
-  const bg = ctx.createLinearGradient(0, 0, VID_W, VID_H);
-  bg.addColorStop(0, '#1B1D23');
-  bg.addColorStop(1, '#0C0D10');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, VID_W, VID_H);
-
   const cx = VID_W / 2;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
 
-  drawLogoRow(ctx, cx, 230, accent);
+  if (transparent) {
+    ctx.clearRect(0, 0, VID_W, VID_H);
+  } else {
+    // dark background
+    const bg = ctx.createLinearGradient(0, 0, VID_W, VID_H);
+    bg.addColorStop(0, '#1B1D23');
+    bg.addColorStop(1, '#0C0D10');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, VID_W, VID_H);
+    drawLogoRow(ctx, cx, 230, accent);
+  }
 
-  // route band
-  const bandY = 420;
-  const bandH = 900;
+  // route band — centered & taller when transparent (no stat block below)
+  const bandY = transparent ? 260 : 420;
+  const bandH = transparent ? 1400 : 900;
   const pts = projectRoute(activity.route, 150, bandY, VID_W - 300, bandH);
 
   // full route, faint
@@ -269,6 +275,9 @@ export function renderFlyoverFrame(
     ctx.stroke();
   }
 
+  // transparent mode is route-only (overlay-friendly) — no stat block
+  if (transparent) return;
+
   // live readouts
   const miles = activity.miles * p;
   const secs = Math.round(activity.seconds * p);
@@ -295,16 +304,26 @@ export function renderFlyoverFrame(
   ctx.fillText(activity.name, cx, VID_H - 120);
 }
 
-/** Best supported recording MIME for this browser (mp4 on Safari, webm elsewhere). */
-export function flyoverMime(): { mime: string; ext: string } | null {
+/**
+ * Best supported recording MIME. `transparent` needs a codec with an alpha
+ * channel — only WebM (VP8/VP9) qualifies (MP4/H.264 has no alpha), so Safari
+ * (WebM-less) returns null there. Opaque prefers MP4 (best mobile support).
+ */
+export function flyoverMime(transparent = false): { mime: string; ext: string } | null {
   if (typeof MediaRecorder === 'undefined') return null;
-  const candidates = [
-    { mime: 'video/mp4;codecs=h264', ext: 'mp4' },
-    { mime: 'video/mp4', ext: 'mp4' },
-    { mime: 'video/webm;codecs=vp9', ext: 'webm' },
-    { mime: 'video/webm;codecs=vp8', ext: 'webm' },
-    { mime: 'video/webm', ext: 'webm' }
-  ];
+  const candidates = transparent
+    ? [
+        { mime: 'video/webm;codecs=vp9', ext: 'webm' },
+        { mime: 'video/webm;codecs=vp8', ext: 'webm' },
+        { mime: 'video/webm', ext: 'webm' }
+      ]
+    : [
+        { mime: 'video/mp4;codecs=h264', ext: 'mp4' },
+        { mime: 'video/mp4', ext: 'mp4' },
+        { mime: 'video/webm;codecs=vp9', ext: 'webm' },
+        { mime: 'video/webm;codecs=vp8', ext: 'webm' },
+        { mime: 'video/webm', ext: 'webm' }
+      ];
   for (const c of candidates) {
     try { if (MediaRecorder.isTypeSupported(c.mime)) return c; } catch { /* try next */ }
   }
@@ -317,16 +336,18 @@ export function flyoverMime(): { mime: string; ext: string } | null {
  */
 export function recordFlyoverVideo(
   activity: Activity,
-  opts: { accent?: string; durationMs?: number; onProgress?: (p: number) => void } = {}
+  opts: { accent?: string; durationMs?: number; transparent?: boolean; onProgress?: (p: number) => void } = {}
 ): Promise<{ blob: Blob; ext: string } | null> {
   return new Promise((resolve) => {
-    const chosen = flyoverMime();
+    const transparent = !!opts.transparent;
+    const chosen = flyoverMime(transparent);
     if (!chosen || activity.route.length < 2) return resolve(null);
 
     const canvas = document.createElement('canvas');
     canvas.width = VID_W;
     canvas.height = VID_H;
-    renderFlyoverFrame(canvas, activity, 0, opts.accent);
+    // alpha:true (default) is required for a transparent recording
+    renderFlyoverFrame(canvas, activity, 0, opts.accent, transparent);
 
     const stream = canvas.captureStream(30);
     let recorder: MediaRecorder;
@@ -351,7 +372,7 @@ export function recordFlyoverVideo(
       const p = Math.min(1, raw);
       // ease-in-out for a smoother "drone" sweep
       const eased = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-      renderFlyoverFrame(canvas, activity, eased, opts.accent);
+      renderFlyoverFrame(canvas, activity, eased, opts.accent, transparent);
       opts.onProgress?.(p);
       if (now - t0 < duration + hold) {
         requestAnimationFrame(tick);

@@ -51,7 +51,7 @@ export function defaultData(): RunnerData {
   return {
     activities: [],
     nutrition: { entries: [], meals: [], profile: null, apiKey: '' },
-    settings: { name: 'Runner', photo: '', accent: 'orange', weightLbs: 175, weeklyGoalMiles: 10, runBpm: 170, walkBpm: 120 }
+    settings: { name: 'Runner', photo: '', accent: 'green', weightLbs: 175, weeklyGoalMiles: 10, runBpm: 170, walkBpm: 120 }
   };
 }
 
@@ -117,15 +117,28 @@ export function loadData(): RunnerData {
     }
     const parsed = JSON.parse(raw) as Partial<RunnerData>;
     const base = defaultData();
-    return {
+    const data: RunnerData = {
       activities: parsed.activities ?? base.activities,
       nutrition: { ...base.nutrition, ...(parsed.nutrition ?? {}) },
       settings: { ...base.settings, ...(parsed.settings ?? {}) }
     };
+    // One-time flip of installs still on the old orange default to the new
+    // green default. Runs once (guarded by a flag) so a later manual choice
+    // of orange is never reverted.
+    try {
+      if (!localStorage.getItem(GREEN_DEFAULT_FLAG)) {
+        if (data.settings.accent === 'orange') data.settings.accent = 'green';
+        localStorage.setItem(GREEN_DEFAULT_FLAG, '1');
+        saveData(data);
+      }
+    } catch { /* ignore */ }
+    return data;
   } catch {
     return defaultData();
   }
 }
+
+const GREEN_DEFAULT_FLAG = 'runner:greenDefault';
 
 export function saveData(data: RunnerData) {
   try {

@@ -28,12 +28,14 @@ export default function ShareCard({
   const [bg, setBg] = useState<CardBackground>({ type: 'gradient', id: 'orange' });
   const [canShare, setCanShare] = useState(false);
   const [videoPct, setVideoPct] = useState<number | null>(null);
+  const [transparentVid, setTransparentVid] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoUrl = useRef<string | null>(null);
 
   const ROUTE_COLORS = useMemo(() => [accent, '#FFFFFF', '#16181D'], [accent]);
-  const videoSupported = useMemo(() => hasRoute && flyoverMime() !== null, [hasRoute]);
+  const videoSupported = useMemo(() => hasRoute && flyoverMime(false) !== null, [hasRoute]);
+  const transparentSupported = useMemo(() => hasRoute && flyoverMime(true) !== null, [hasRoute]);
 
   // feature-detect file sharing (some browsers throw instead of returning false)
   useEffect(() => {
@@ -50,9 +52,9 @@ export default function ShareCard({
     const canvas = canvasRef.current;
     if (!canvas) return;
     if (mode === 'route') renderTransparentRoute(canvas, activity.route, routeColor);
-    else if (mode === 'video') renderFlyoverFrame(canvas, activity, 0.62, accent);
+    else if (mode === 'video') renderFlyoverFrame(canvas, activity, 0.62, accent, transparentVid);
     else renderStoryCard(canvas, activity, { background: bg, accent });
-  }, [mode, routeColor, bg, activity, accent]);
+  }, [mode, routeColor, bg, activity, accent, transparentVid]);
 
   // release any picked-photo object URL when the modal unmounts
   useEffect(() => () => {
@@ -115,13 +117,16 @@ export default function ShareCard({
     try {
       const result = await recordFlyoverVideo(activity, {
         accent,
+        transparent: transparentVid,
         onProgress: (p) => setVideoPct(Math.round(p * 100))
       });
       if (!result) {
-        toast("This browser can't record video — try the story card instead");
+        toast(transparentVid
+          ? "This browser can't record transparent video — try turning Transparent off"
+          : "This browser can't record video — try the story card instead");
         return;
       }
-      const name = `runner-flyover-${activity.date.slice(0, 10)}.${result.ext}`;
+      const name = `runner-flyover-${activity.date.slice(0, 10)}${transparentVid ? '-transparent' : ''}.${result.ext}`;
       const file = new File([result.blob], name, { type: result.blob.type });
       // prefer the native share sheet (saves straight to Photos on mobile)
       if (navigator.canShare?.({ files: [file] })) {
@@ -199,7 +204,7 @@ export default function ShareCard({
         {/* preview — checkerboard behind route mode makes transparency visible */}
         <div
           className="rounded-2xl border border-line overflow-hidden flex items-center justify-center max-h-[50vh] p-3"
-          style={mode === 'route' ? CHECKER : { background: '#16181D' }}
+          style={mode === 'route' || (mode === 'video' && transparentVid) ? CHECKER : { background: '#16181D' }}
         >
           <canvas
             ref={canvasRef}
@@ -210,10 +215,33 @@ export default function ShareCard({
 
         {/* mode-specific options */}
         {mode === 'video' ? (
-          <p className="text-xs text-dim">
-            A {activity.miles.toFixed(2)}-mi drone flyover of your route, counting up your
-            distance, time and pace. Exports a 9:16 clip perfect for stories.
-          </p>
+          <div className="space-y-3">
+            <label className="flex items-center justify-between gap-3">
+              <span className="min-w-0">
+                <span className="text-sm font-bold">Transparent background</span>
+                <span className="block text-[11px] text-dim">
+                  Route-only clip (no card) to overlay on your own videos
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                className="w-5 h-5 accent-brand shrink-0"
+                checked={transparentVid}
+                onChange={(e) => setTransparentVid(e.target.checked)}
+              />
+            </label>
+            {transparentVid && !transparentSupported ? (
+              <p className="text-xs text-bad">
+                This browser can't record transparent video (Safari/iOS). Chrome or Android exports a transparent WebM.
+              </p>
+            ) : (
+              <p className="text-xs text-dim">
+                {transparentVid
+                  ? 'Exports a transparent WebM of just your route drawing in — drop it over any clip.'
+                  : `A ${activity.miles.toFixed(2)}-mi drone flyover counting up your distance, time and pace. 9:16, perfect for stories.`}
+              </p>
+            )}
+          </div>
         ) : mode === 'route' ? (
           <div className="flex items-center gap-3">
             <span className="label">Line color</span>
@@ -262,7 +290,11 @@ export default function ShareCard({
 
         {/* actions */}
         {mode === 'video' ? (
-          <button className="btn-primary w-full py-3" onClick={exportVideo} disabled={videoPct !== null}>
+          <button
+            className="btn-primary w-full py-3"
+            onClick={exportVideo}
+            disabled={videoPct !== null || (transparentVid && !transparentSupported)}
+          >
             {videoPct !== null ? (
               <><Loader2 size={18} className="animate-spin" /> Rendering… {videoPct}%</>
             ) : (

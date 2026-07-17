@@ -1,5 +1,5 @@
 // Generates RUNNER PWA icons (PNG) with no external deps — built-in zlib.
-// Brand-orange rounded tile with a white ascending route line + endpoint dot,
+// Brand-green rounded tile with a white ascending route line + endpoint dot,
 // matching src/components/Logo.tsx.
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -45,7 +45,7 @@ function png(width, height, rgba) {
   return Buffer.concat([sig, chunk('IHDR', ihdr), chunk('IDAT', idat), chunk('IEND', Buffer.alloc(0))]);
 }
 
-const ORANGE = [252, 76, 2]; // #FC4C02
+const BRAND = [22, 163, 74]; // #16A34A (green — app default)
 const WHITE = [255, 255, 255];
 
 // route path in normalized [0,1] coords (matches Logo.tsx: 12,33 21,24 27,30 36,15 / 48)
@@ -99,9 +99,9 @@ function render(size) {
       // anti-aliased blend of white mark over orange
       const t = edge <= -0.8 ? 1 : edge >= 0.8 ? 0 : 0.5 - edge / 1.6;
 
-      buf[i] = Math.round(ORANGE[0] + (WHITE[0] - ORANGE[0]) * t);
-      buf[i + 1] = Math.round(ORANGE[1] + (WHITE[1] - ORANGE[1]) * t);
-      buf[i + 2] = Math.round(ORANGE[2] + (WHITE[2] - ORANGE[2]) * t);
+      buf[i] = Math.round(BRAND[0] + (WHITE[0] - BRAND[0]) * t);
+      buf[i + 1] = Math.round(BRAND[1] + (WHITE[1] - BRAND[1]) * t);
+      buf[i + 2] = Math.round(BRAND[2] + (WHITE[2] - BRAND[2]) * t);
       buf[i + 3] = a;
     }
   }

@@ -1,7 +1,7 @@
 /* RUNNER service worker — offline app shell.
    Network-first for navigations (so updates land), cache-first for static
    assets. Bump CACHE to invalidate after a deploy. */
-const CACHE = 'runner-v3';
+const CACHE = 'runner-v4';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

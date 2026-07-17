@@ -1,13 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { X, Trash2, Pencil, Check, Share2, Play, Square } from 'lucide-react';
+import { X, Trash2, Pencil, Check, Share2, Play, Square, Layers } from 'lucide-react';
 import { useStore, type Activity } from '../lib/storage';
 import { deleteRemoteActivity } from '../lib/sync';
 import { fmtClock, paceFor, fmtRelDate, caloriesFor, haversineMeters, type LatLng } from '../lib/run';
 import { accentHex } from '../lib/theme';
 import { toast } from '../lib/toast';
 import ShareCard from './ShareCard';
+
+/** Street (OpenStreetMap) or satellite (Esri World Imagery) base layer. */
+function makeTileLayer(satellite: boolean): L.TileLayer {
+  return satellite
+    ? L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 19, attribution: 'Tiles © Esri' }
+      )
+    : L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      });
+}
 
 /** Full-screen activity page — map, stats, mile splits, rename, delete.
  *  readOnly = a partner's activity from the shared feed (view + share only). */
@@ -20,8 +33,10 @@ export default function ActivityDetail({
   const [sharing, setSharing] = useState(false);
   const [name, setName] = useState(activity.name);
   const [flying, setFlying] = useState(false);
+  const [satellite, setSatellite] = useState(false);
   const mapDiv = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
+  const tileRef = useRef<L.TileLayer | null>(null);
   const baseLine = useRef<L.Polyline | null>(null);
   // flyover animation handles
   const rafRef = useRef<number | null>(null);
@@ -36,10 +51,7 @@ export default function ActivityDetail({
       dragging: true,
       scrollWheelZoom: false
     });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(m);
+    tileRef.current = makeTileLayer(satellite).addTo(m);
     const line = L.polyline(activity.route as L.LatLngExpression[], {
       color: accent, weight: 5, opacity: 0.95
     }).addTo(m);
@@ -53,11 +65,23 @@ export default function ActivityDetail({
       rafRef.current = null;
       m.remove();
       map.current = null;
+      tileRef.current = null;
       baseLine.current = null;
       flyMarker.current = null;
       flyTrail.current = null;
     };
   }, [activity]);
+
+  /** Swap the base map between street tiles and Esri satellite imagery. */
+  const toggleSatellite = () => {
+    const m = map.current;
+    if (!m) return;
+    const next = !satellite;
+    setSatellite(next);
+    tileRef.current?.remove();
+    tileRef.current = makeTileLayer(next).addTo(m);
+    tileRef.current.bringToBack();
+  };
 
   /** Reset the map back to the full-route overview and tear down the flyover. */
   const endFlyover = () => {
@@ -202,6 +226,16 @@ export default function ActivityDetail({
           // can't paint over the sticky header or the share modal
           <div className="card !p-0 overflow-hidden isolate relative">
             <div ref={mapDiv} className="w-full h-64" />
+            <button
+              onClick={toggleSatellite}
+              className={`absolute top-3 left-3 z-[500] inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-xs font-black shadow-lg backdrop-blur active:scale-95 transition-transform ${
+                satellite ? 'bg-brand text-white' : 'bg-white/90 text-ink'
+              }`}
+              aria-label={satellite ? 'Switch to street map' : 'Switch to satellite'}
+            >
+              <Layers size={14} />
+              {satellite ? 'Satellite' : 'Street'}
+            </button>
             <button
               onClick={flying ? endFlyover : startFlyover}
               className="absolute bottom-3 right-3 z-[500] inline-flex items-center gap-1.5 rounded-full bg-ink/90 text-white pl-3 pr-4 py-2 text-xs font-black shadow-lg backdrop-blur active:scale-95 transition-transform"

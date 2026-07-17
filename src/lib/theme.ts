@@ -15,14 +15,15 @@ export interface Accent {
 }
 
 export const ACCENTS: Accent[] = [
-  { id: 'orange', label: 'Ember',  hex: '#FC4C02', dark: '#DE4302', soft: '#FFF0E8' },
   { id: 'green',  label: 'Forest', hex: '#16A34A', dark: '#15803D', soft: '#DCFCE7' },
+  { id: 'orange', label: 'Ember',  hex: '#FC4C02', dark: '#DE4302', soft: '#FFF0E8' },
   { id: 'blue',   label: 'Ocean',  hex: '#2563EB', dark: '#1D4ED8', soft: '#DBEAFE' },
   { id: 'violet', label: 'Violet', hex: '#7C3AED', dark: '#6D28D9', soft: '#EDE9FE' },
   { id: 'rose',   label: 'Rose',   hex: '#E11D48', dark: '#BE123C', soft: '#FFE4E6' },
   { id: 'slate',  label: 'Slate',  hex: '#334155', dark: '#1E293B', soft: '#E2E8F0' }
 ];
 
+/** Green is the default brand color. */
 export const DEFAULT_ACCENT = ACCENTS[0];
 
 export function getAccent(id: string | undefined): Accent {
