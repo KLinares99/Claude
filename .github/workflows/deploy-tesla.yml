@@ -1,0 +1,61 @@
+name: Deploy Pages site with Tesla Learning Hub
+
+# Deploys the combined GitHub Pages site:
+#   /            -> the training app, built unchanged from its own branch
+#   /tesla/      -> the Tesla Learning Hub (static, from this branch)
+# This preserves the existing app at its existing URL — nothing is overridden.
+
+on:
+  push:
+    branches: [claude/tesla-learning-hub-pf54yw]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # The training app, from the branch that has always deployed it
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/running-learning-hub-app-g4r6gr
+          path: main-app
+      # The Tesla Learning Hub, from this branch
+      - uses: actions/checkout@v4
+        with:
+          path: hub
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: main-app/package-lock.json
+      - run: npm ci
+        working-directory: main-app
+      - run: npm run build
+        working-directory: main-app
+      # Overlay the hub as a static subdirectory of the same site
+      - run: cp -r hub/tesla-learning-hub main-app/dist/tesla
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: main-app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
