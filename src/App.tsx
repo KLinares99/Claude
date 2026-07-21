@@ -3,11 +3,13 @@ import Nav, { type Tab } from './components/Nav';
 import Logo from './components/Logo';
 import Home from './screens/Home';
 import Record from './screens/Record';
+import Train from './screens/Train';
 import Nutrition from './screens/Nutrition';
 import Profile from './screens/Profile';
 import Toast from './components/ui/Toast';
 import QuoteOfDay from './components/QuoteOfDay';
 import { trackerSubscribe, trackerGet } from './lib/tracker';
+import { liftSubscribe, liftGet } from './lib/training';
 import { useStore } from './lib/storage';
 import { applyAccent } from './lib/theme';
 import { fmtClock, metersToMiles } from './lib/run';
@@ -15,6 +17,7 @@ import { fmtClock, metersToMiles } from './lib/run';
 const titles: Record<Tab, string> = {
   home: 'Runner',
   record: 'Record',
+  train: 'Train',
   nutrition: 'Nutrition',
   you: 'You'
 };
@@ -22,6 +25,7 @@ const titles: Record<Tab, string> = {
 export default function App() {
   const [tab, setTab] = useState<Tab>('home');
   const tracker = useSyncExternalStore(trackerSubscribe, trackerGet);
+  const lift = useSyncExternalStore(liftSubscribe, liftGet);
   const { data } = useStore();
   const recording = tracker.phase !== 'idle';
 
@@ -49,9 +53,24 @@ export default function App() {
         <div className={tab === 'record' ? '' : 'hidden'}>
           <Record active={tab === 'record'} />
         </div>
+        {tab === 'train' && <Train />}
         {tab === 'nutrition' && <Nutrition />}
         {tab === 'you' && <Profile />}
       </main>
+
+      {/* live lift-session banner when working out on another tab */}
+      {lift.active && tab !== 'train' && !(recording && tab !== 'record') && (
+        <button
+          onClick={() => setTab('train')}
+          className="fixed inset-x-0 z-40 flex justify-center px-4"
+          style={{ bottom: 'calc(76px + env(safe-area-inset-bottom))' }}
+        >
+          <span className="flex items-center gap-2.5 bg-ink text-white rounded-full pl-3 pr-4 py-2 shadow-lg max-w-[480px] w-full justify-center">
+            <span className="w-2.5 h-2.5 rounded-full bg-brand rec-dot" />
+            <span className="text-sm font-bold nums">Lifting · {lift.name} · {fmtClock(lift.elapsed)}</span>
+          </span>
+        </button>
+      )}
 
       {/* live session banner when recording on another tab */}
       {recording && tab !== 'record' && (

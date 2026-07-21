@@ -13,6 +13,7 @@
  */
 import { createClient, type SupabaseClient, type Session } from '@supabase/supabase-js';
 import { getData, mutateStore, onStoreChange, type Activity } from './storage';
+import type { WorkoutLog, LoggedExercise } from './training';
 
 // Fill these in to skip the paste-config step on every device:
 // Runner's Supabase project. The anon key is public by design — row-level
@@ -29,14 +30,33 @@ export interface PartnerActivity extends Activity {
   ownerName: string;
 }
 
+export interface Friend {
+  id: string;
+  name: string;
+  username: string;
+}
+
+/** A partner's or friend's synced workout for the feed. */
+export interface RemoteWorkout extends WorkoutLog {
+  ownerId: string;
+  ownerName: string;
+}
+
 export interface SyncState {
   configured: boolean;
   session: Session | null;
   myName: string;
+  myUsername: string;      // '' until claimed
   myCode: string;          // invite code to share
   partnerId: string | null;
   partnerName: string;
   partnerActivities: PartnerActivity[];
+  /** true once the v2 (friends) schema exists on the server */
+  friendsReady: boolean;
+  following: Friend[];
+  followers: Friend[];
+  friendActivities: PartnerActivity[];   // runs from people I follow (partner excluded)
+  friendWorkouts: RemoteWorkout[];       // workouts from partner + people I follow
   /** kudos keyed `${activity_user_id}:${activity_id}` → giver user ids */
   kudos: Record<string, string[]>;
   status: 'idle' | 'syncing' | 'error';
@@ -44,9 +64,10 @@ export interface SyncState {
 }
 
 let state: SyncState = {
-  configured: false, session: null, myName: '', myCode: '',
-  partnerId: null, partnerName: '', partnerActivities: [], kudos: {},
-  status: 'idle', error: ''
+  configured: false, session: null, myName: '', myUsername: '', myCode: '',
+  partnerId: null, partnerName: '', partnerActivities: [],
+  friendsReady: false, following: [], followers: [], friendActivities: [], friendWorkouts: [],
+  kudos: {}, status: 'idle', error: ''
 };
 
 let client: SupabaseClient | null = null;
@@ -112,7 +133,10 @@ function initClient() {
   client.auth.onAuthStateChange((_evt, session) => {
     set({ session });
     if (session) void syncNow();
-    else set({ partnerActivities: [], kudos: {}, myCode: '', partnerId: null, partnerName: '' });
+    else set({
+      partnerActivities: [], kudos: {}, myCode: '', partnerId: null, partnerName: '',
+      myUsername: '', following: [], followers: [], friendActivities: [], friendWorkouts: []
+    });
   });
   void client.auth.getSession().then(({ data }) => {
     set({ session: data.session });
@@ -213,33 +237,80 @@ export async function syncNow(): Promise<void> {
       if (up.error) throw up.error;
     }
 
-    // 3. profile + partner
+    // 3. profiles (me + partner + friends, per RLS) — partner found by id,
+    //    never by "the other row" (there can be many rows now)
     const prof = await c.from('profiles').select('*');
     if (prof.error) throw prof.error;
-    const me = prof.data.find((p: { id: string }) => p.id === uid);
-    const partner = prof.data.find((p: { id: string }) => p.id !== uid);
+    interface ProfileRow { id: string; name: string; code: string; partner_id: string | null; username?: string | null }
+    const profiles = prof.data as ProfileRow[];
+    const byId = new Map(profiles.map((p) => [p.id, p]));
+    const me = byId.get(uid);
+    const partner = me?.partner_id ? byId.get(me.partner_id) : undefined;
     set({
       myName: me?.name ?? '',
+      myUsername: me?.username ?? '',
       myCode: me?.code ?? '',
       partnerId: me?.partner_id ?? null,
       partnerName: partner?.name ?? ''
     });
+    const nameOf = (id: string) => byId.get(id)?.name ?? 'Friend';
 
-    // 4. partner activities
-    if (me?.partner_id) {
-      const theirs = await c.from('activities').select('*').eq('user_id', me.partner_id)
-        .order('date', { ascending: false }).limit(100);
-      if (theirs.error) throw theirs.error;
-      set({
-        partnerActivities: (theirs.data as ActivityRow[]).map((r) => ({
-          ...fromRow(r), ownerId: r.user_id, ownerName: partner?.name ?? 'Partner'
-        }))
+    // 4. follow edges (v2 schema — tolerate the table not existing yet)
+    let followingIds: string[] = [];
+    try {
+      const f = await c.from('follows').select('*');
+      if (f.error) throw f.error;
+      const edges = f.data as { follower: string; followee: string }[];
+      followingIds = edges.filter((e) => e.follower === uid).map((e) => e.followee);
+      const followerIds = edges.filter((e) => e.followee === uid).map((e) => e.follower);
+      const toFriend = (id: string): Friend => ({
+        id, name: nameOf(id), username: byId.get(id)?.username ?? ''
       });
-    } else {
-      set({ partnerActivities: [] });
+      set({ friendsReady: true, following: followingIds.map(toFriend), followers: followerIds.map(toFriend) });
+    } catch {
+      set({ friendsReady: false, following: [], followers: [] });
     }
 
-    // 5. kudos
+    // 5. everyone else's runs the server lets us see (partner + followed)
+    const theirs = await c.from('activities').select('*').neq('user_id', uid)
+      .order('date', { ascending: false }).limit(200);
+    if (theirs.error) throw theirs.error;
+    const remoteRuns = (theirs.data as ActivityRow[]).map((r) => ({
+      ...fromRow(r), ownerId: r.user_id, ownerName: nameOf(r.user_id)
+    }));
+    set({
+      partnerActivities: remoteRuns.filter((r) => r.ownerId === me?.partner_id),
+      friendActivities: remoteRuns.filter((r) => r.ownerId !== me?.partner_id)
+    });
+
+    // 6. workouts (v2): push mine, pull mine (cross-device restore) + others
+    try {
+      const myLogs = getData().training.logs;
+      if (myLogs.length > 0) {
+        const up = await c.from('workout_logs').upsert(myLogs.map((l) => toWorkoutRow(l, uid)), { onConflict: 'user_id,id' });
+        if (up.error) throw up.error;
+      }
+      const w = await c.from('workout_logs').select('*').order('date', { ascending: false }).limit(200);
+      if (w.error) throw w.error;
+      const rows = w.data as WorkoutRow[];
+      const mineRemote = rows.filter((r) => r.user_id === uid);
+      const localIds2 = new Set(getData().training.logs.map((l) => l.id));
+      const restore = mineRemote.filter((r) => !localIds2.has(r.id));
+      if (restore.length > 0) {
+        mutateStore((d) => {
+          d.training.logs.push(...restore.map(fromWorkoutRow));
+          d.training.logs.sort((a, b) => a.date.localeCompare(b.date));
+          return d;
+        });
+      }
+      set({
+        friendWorkouts: rows.filter((r) => r.user_id !== uid).map((r) => ({
+          ...fromWorkoutRow(r), ownerId: r.user_id, ownerName: nameOf(r.user_id)
+        }))
+      });
+    } catch { /* v2 schema not installed yet — friendsReady already reflects it */ }
+
+    // 7. kudos
     const k = await c.from('kudos').select('*');
     if (k.error) throw k.error;
     const kudos: Record<string, string[]> = {};
@@ -251,6 +322,75 @@ export async function syncNow(): Promise<void> {
   } catch (err) {
     set({ status: 'error', error: err instanceof Error ? err.message : 'Sync failed' });
   }
+}
+
+// ---- workout rows ------------------------------------------------------------
+
+interface WorkoutRow {
+  user_id: string;
+  id: string;
+  date: string;
+  name: string;
+  seconds: number;
+  volume: number;
+  exercises: LoggedExercise[];
+}
+
+function toWorkoutRow(l: WorkoutLog, userId: string): WorkoutRow {
+  let volume = 0;
+  for (const e of l.exercises) for (const s of e.sets) volume += s.reps * s.weight;
+  return {
+    user_id: userId, id: l.id, date: l.date, name: l.name,
+    seconds: l.seconds, volume: Math.round(volume), exercises: l.exercises
+  };
+}
+
+function fromWorkoutRow(r: WorkoutRow): WorkoutLog {
+  return { id: r.id, date: r.date, name: r.name, seconds: r.seconds, exercises: r.exercises ?? [] };
+}
+
+// ---- friends API -------------------------------------------------------------
+
+/** Claim or change my @username. Returns '' on success or an error message. */
+export async function setUsername(username: string): Promise<string> {
+  if (!client) return 'Sync is not configured yet.';
+  const { data, error } = await client.rpc('set_username', { p_username: username });
+  if (error) return friendlyV2Error(error.message);
+  if (typeof data === 'string' && data.startsWith('error:')) return data.slice(6).trim();
+  await syncNow();
+  return '';
+}
+
+/** Follow someone by @username. Returns '' on success or an error message. */
+export async function followUser(username: string): Promise<string> {
+  if (!client) return 'Sync is not configured yet.';
+  const { data, error } = await client.rpc('follow_user', { p_username: username.replace(/^@/, '') });
+  if (error) return friendlyV2Error(error.message);
+  if (typeof data === 'string' && data.startsWith('error:')) return data.slice(6).trim();
+  await syncNow();
+  return '';
+}
+
+export async function unfollowUser(userId: string) {
+  const uid = state.session?.user.id;
+  if (!client || !uid) return;
+  await client.from('follows').delete().match({ follower: uid, followee: userId });
+  await syncNow();
+}
+
+/** Remove one of my workouts remotely (called when it's deleted locally). */
+export async function deleteRemoteWorkout(logId: string) {
+  const uid = state.session?.user.id;
+  if (!client || !uid) return;
+  try {
+    await client.from('workout_logs').delete().match({ user_id: uid, id: logId });
+  } catch { /* v2 not installed */ }
+}
+
+function friendlyV2Error(msg: string): string {
+  return /function|relation|does not exist|schema cache/i.test(msg)
+    ? 'The server needs the friends upgrade — run supabase/schema_v2_friends.sql in the Supabase SQL editor.'
+    : msg;
 }
 
 /** Give / take back a heart on an activity. */

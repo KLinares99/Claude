@@ -82,6 +82,13 @@ design); row-level security in the schema is what keeps each account's
 writes to itself. To skip the paste step entirely, bake the two values into
 `DEFAULTS` in `src/lib/sync.ts` and redeploy.
 
+### Friends upgrade (usernames + follows + workout sharing)
+To enable the **You → Friends** card (claim a @username, follow friends,
+and share runs *and* workouts in the feed), run one more SQL file on the
+same project: **SQL Editor → New query**, paste the entire contents of
+[`supabase/schema_v2_friends.sql`](supabase/schema_v2_friends.sql), and
+Run. Safe to re-run; existing couple links keep working unchanged.
+
 ## Develop
 ```bash
 npm install

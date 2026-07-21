@@ -9,6 +9,7 @@ import { ACCENTS, accentHex } from '../lib/theme';
 import { getUsdaKey, setUsdaKey } from '../lib/foodSearch';
 import { toast } from '../lib/toast';
 import CoupleSync from './CoupleSync';
+import Friends from './Friends';
 
 export default function Profile() {
   const { data, update } = useStore();
@@ -99,6 +100,15 @@ export default function Profile() {
               haveMeal.add(m.id);
             }
           }
+          const haveTpl = new Set(d.training.templates.map((t) => t.id));
+          for (const t of parsed.training?.templates ?? []) {
+            if (!haveTpl.has(t.id)) d.training.templates.push(t);
+          }
+          const haveLog = new Set(d.training.logs.map((l) => l.id));
+          for (const l of parsed.training?.logs ?? []) {
+            if (!haveLog.has(l.id)) d.training.logs.push(l);
+          }
+          d.training.logs.sort((a, b) => a.date.localeCompare(b.date));
           // On a fresh/wiped device, fully restore profile + settings from the
           // backup; on a device already in use, keep current settings.
           if (fresh) {
@@ -231,6 +241,8 @@ export default function Profile() {
       </div>
 
       <CoupleSync />
+
+      <Friends />
 
       {/* settings */}
       <div className="card-pad space-y-3">

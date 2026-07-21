@@ -1,41 +1,52 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import { Flame, Plus, ChevronRight, Heart, Trophy, Utensils, Lock } from 'lucide-react';
+import { Flame, Plus, ChevronRight, Heart, Trophy, Utensils, Lock, TrendingUp, Dumbbell } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import {
-  useStore, weekStats, weekByDay, computeStreak, raceBests, weekCalories, uid,
+  useStore, weekStats, weekByDay, computeStreak, raceBests, raceTrend, weekCalories, uid,
   type Activity
 } from '../lib/storage';
 import { syncSubscribe, syncGet, toggleKudos } from '../lib/sync';
-import { fmtClock, paceFor, fmtRelDate, defaultRunName } from '../lib/run';
+import { logVolume, totalSets, type WorkoutLog } from '../lib/training';
+import { accentHex } from '../lib/theme';
+import { fmtClock, paceFor, fmtRelDate, defaultRunName, RACE_DISTANCES } from '../lib/run';
 import { dayTotals, calorieTarget, localDateISO } from '../lib/nutrition';
 import RoutePreview from '../components/ui/RoutePreview';
 import Mascot from '../components/Mascot';
+import WhatsNew from '../components/WhatsNew';
 import ActivityDetail from './ActivityDetail';
 import { toast } from '../lib/toast';
 
-interface FeedItem {
-  a: Activity;
+type FeedItem = {
   who: string;
   ownerId: string;   // '' when not signed in
-  isPartner: boolean;
-}
+  isRemote: boolean; // partner's or a friend's
+  date: string;
+} & ({ kind: 'run'; a: Activity } | { kind: 'lift'; w: WorkoutLog });
 
 export default function Home() {
   const { data, update } = useStore();
   const sync = useSyncExternalStore(syncSubscribe, syncGet);
-  const [open, setOpen] = useState<{ id: string; partner: boolean } | null>(null);
+  const [open, setOpen] = useState<{ id: string; remote: boolean } | null>(null);
   const [logging, setLogging] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
 
   const myId = sync.session?.user.id ?? '';
   const feed = useMemo<FeedItem[]>(() => {
-    const mine: FeedItem[] = data.activities.map((a) => ({
-      a, who: data.settings.name, ownerId: myId, isPartner: false
-    }));
-    const theirs: FeedItem[] = sync.partnerActivities.map((a) => ({
-      a, who: a.ownerName, ownerId: a.ownerId, isPartner: true
-    }));
-    return [...mine, ...theirs].sort((x, y) => y.a.date.localeCompare(x.a.date));
-  }, [data.activities, data.settings.name, sync.partnerActivities, myId]);
+    const items: FeedItem[] = [];
+    for (const a of data.activities) {
+      items.push({ kind: 'run', a, who: data.settings.name, ownerId: myId, isRemote: false, date: a.date });
+    }
+    for (const w of data.training.logs) {
+      items.push({ kind: 'lift', w, who: data.settings.name, ownerId: myId, isRemote: false, date: w.date });
+    }
+    for (const a of [...sync.partnerActivities, ...sync.friendActivities]) {
+      items.push({ kind: 'run', a, who: a.ownerName, ownerId: a.ownerId, isRemote: true, date: a.date });
+    }
+    for (const w of sync.friendWorkouts) {
+      items.push({ kind: 'lift', w, who: w.ownerName, ownerId: w.ownerId, isRemote: true, date: w.date });
+    }
+    return items.sort((x, y) => y.date.localeCompare(x.date));
+  }, [data.activities, data.training.logs, data.settings.name, sync.partnerActivities, sync.friendActivities, sync.friendWorkouts, myId]);
 
   const week = weekStats(data.activities);
   const days = weekByDay(data.activities);
@@ -43,14 +54,17 @@ export default function Home() {
   const streak = computeStreak(data.activities);
   const goal = data.settings.weeklyGoalMiles;
   const openItem = open
-    ? open.partner
-      ? sync.partnerActivities.find((a) => a.id === open.id)
+    ? open.remote
+      ? [...sync.partnerActivities, ...sync.friendActivities].find((a) => a.id === open.id)
       : data.activities.find((a) => a.id === open.id)
     : null;
 
   return (
     <>
     <div className="space-y-4">
+      {/* release notes — shows once after each update */}
+      <WhatsNew />
+
       {/* weekly snapshot */}
       <div className="card-pad">
         <div className="flex items-center justify-between">
@@ -116,6 +130,9 @@ export default function Home() {
       {/* race-distance best efforts */}
       <RaceDistancesCard activities={data.activities} />
 
+      {/* time-over-time progress graph per race distance */}
+      <RaceTrendCard activities={data.activities} accent={accentHex(data.settings.accent)} />
+
       {/* calorie intake summary */}
       <CalorieCard
         entries={data.nutrition.entries}
@@ -139,28 +156,42 @@ export default function Home() {
         </div>
       ) : (
         feed.map((item) => {
-          const key = `${item.ownerId}:${item.a.id}`;
+          const itemId = item.kind === 'run' ? item.a.id : item.w.id;
+          const key = `${item.ownerId}:${itemId}`;
           const hearts = sync.kudos[key] ?? [];
-          return (
+          const onHeart = () => {
+            if (!item.ownerId) return;
+            // celebrate only when giving kudos, not taking it back
+            if (!(myId && hearts.includes(myId))) {
+              setCelebrate(true);
+              window.setTimeout(() => setCelebrate(false), 1400);
+            }
+            toggleKudos(item.ownerId, itemId);
+          };
+          const kudosProps = {
+            hearts: hearts.length,
+            iHearted: !!myId && hearts.includes(myId),
+            canHeart: !!myId && item.isRemote,
+            onHeart
+          };
+          return item.kind === 'run' ? (
             <ActivityCard
-              key={`${item.isPartner ? 'p' : 'm'}-${item.a.id}`}
+              key={`${item.isRemote ? 'r' : 'm'}-${itemId}`}
               a={item.a}
               who={item.who}
-              photo={item.isPartner ? '' : data.settings.photo}
-              isPartner={item.isPartner}
-              hearts={hearts.length}
-              iHearted={!!myId && hearts.includes(myId)}
-              canHeart={!!myId && !!sync.partnerId}
-              onHeart={() => {
-                if (!item.ownerId) return;
-                // celebrate only when giving kudos, not taking it back
-                if (!(myId && hearts.includes(myId))) {
-                  setCelebrate(true);
-                  window.setTimeout(() => setCelebrate(false), 1400);
-                }
-                toggleKudos(item.ownerId, item.a.id);
-              }}
-              onOpen={() => setOpen({ id: item.a.id, partner: item.isPartner })}
+              photo={item.isRemote ? '' : data.settings.photo}
+              isPartner={item.isRemote}
+              {...kudosProps}
+              onOpen={() => setOpen({ id: item.a.id, remote: item.isRemote })}
+            />
+          ) : (
+            <WorkoutCard
+              key={`${item.isRemote ? 'r' : 'm'}-${itemId}`}
+              w={item.w}
+              who={item.who}
+              photo={item.isRemote ? '' : data.settings.photo}
+              isPartner={item.isRemote}
+              {...kudosProps}
             />
           );
         })
@@ -178,7 +209,7 @@ export default function Home() {
       )}
 
       {openItem && (
-        <ActivityDetail activity={openItem} readOnly={open?.partner} onClose={() => setOpen(null)} />
+        <ActivityDetail activity={openItem} readOnly={open?.remote} onClose={() => setOpen(null)} />
       )}
 
       {logging && (
@@ -276,6 +307,98 @@ function RaceDistancesCard({ activities }: { activities: Activity[] }) {
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** Pick a race distance and see your projected time for every qualifying run
+ *  over time — a downward line means you're getting faster. */
+function RaceTrendCard({ activities, accent }: { activities: Activity[]; accent: string }) {
+  const available = useMemo(
+    () => RACE_DISTANCES.filter((d) => raceTrend(activities, d.miles).length >= 1),
+    [activities]
+  );
+  const [sel, setSel] = useState<string | null>(null);
+  const active = available.find((d) => d.label === sel) ?? available[0];
+  const points = useMemo(
+    () =>
+      active
+        ? raceTrend(activities, active.miles).map((p) => ({
+            label: new Date(p.date).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }),
+            seconds: p.seconds,
+            name: p.name,
+            exact: p.exact
+          }))
+        : [],
+    [activities, active]
+  );
+  const best = points.length ? Math.min(...points.map((p) => p.seconds)) : 0;
+
+  if (available.length === 0) return null;
+
+  return (
+    <div className="card-pad">
+      <div className="flex items-center gap-2 mb-3">
+        <TrendingUp size={16} className="text-brand" />
+        <h2 className="font-black text-base">Progress</h2>
+      </div>
+      <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 mb-3">
+        {available.map((d) => {
+          const on = d.label === (active?.label ?? '');
+          return (
+            <button
+              key={d.label}
+              onClick={() => setSel(d.label)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold border transition-colors ${
+                on ? 'border-brand bg-brand text-white' : 'border-line text-dim hover:text-ink'
+              }`}
+            >
+              {d.label}
+            </button>
+          );
+        })}
+      </div>
+      {points.length < 2 ? (
+        <p className="text-xs text-dim">
+          One {active?.label} on the books ({fmtClock(points[0]?.seconds ?? 0)}). Log another run
+          that far and the trend line appears.
+        </p>
+      ) : (
+        <>
+          <ResponsiveContainer width="100%" height={170}>
+            <LineChart data={points} margin={{ left: 4, right: 10, top: 8, bottom: 0 }}>
+              <XAxis dataKey="label" tick={{ fill: '#9CA3AF', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis
+                width={44}
+                tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
+                domain={['dataMin - 60', 'dataMax + 60']}
+                tickFormatter={(v: number) => fmtClock(v)}
+              />
+              <Tooltip
+                contentStyle={{ background: '#fff', border: '1px solid #E7E5E0', borderRadius: 10, fontSize: 12 }}
+                formatter={(v: number) => [fmtClock(v), active?.label]}
+                labelFormatter={(l, payload) => {
+                  const p = payload?.[0]?.payload as { name?: string; exact?: boolean } | undefined;
+                  return `${p?.name ?? l}${p?.exact ? '' : ' (est from longer run)'}`;
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="seconds"
+                stroke={accent}
+                strokeWidth={2.5}
+                dot={{ r: 3.5, fill: accent, strokeWidth: 0 }}
+                activeDot={{ r: 5 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+          <p className="text-[11px] text-dim mt-1">
+            Best {active?.label}: <span className="font-bold text-ink nums">{fmtClock(best)}</span> · lower is faster
+          </p>
+        </>
       )}
     </div>
   );
@@ -413,25 +536,90 @@ function ActivityCard({
           <RoutePreview route={a.route} />
         </div>
       )}
-      {canHeart && (
-        <div className="px-4 pb-3 flex items-center gap-2">
-          <span
-            role="button"
-            aria-label={iHearted ? 'Remove kudos' : 'Give kudos'}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold border ${
-              iHearted ? 'border-brand bg-brand-soft text-brand' : 'border-line text-dim hover:text-brand'
-            }`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onHeart();
-            }}
-          >
-            <Heart size={14} fill={iHearted ? 'currentColor' : 'none'} />
-            {hearts > 0 ? hearts : 'Kudos'}
+      <KudosRow hearts={hearts} iHearted={iHearted} canHeart={canHeart} onHeart={onHeart} />
+    </button>
+  );
+}
+
+/** Heart pill under a feed card — interactive for others' items, and a
+ *  read-only count of received hearts on your own. */
+function KudosRow({
+  hearts, iHearted, canHeart, onHeart
+}: { hearts: number; iHearted: boolean; canHeart: boolean; onHeart: () => void }) {
+  if (!canHeart && hearts === 0) return null;
+  return (
+    <div className="px-4 pb-3 flex items-center gap-2">
+      <span
+        role={canHeart ? 'button' : undefined}
+        aria-label={canHeart ? (iHearted ? 'Remove kudos' : 'Give kudos') : `${hearts} kudos received`}
+        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold border ${
+          iHearted || (!canHeart && hearts > 0)
+            ? 'border-brand bg-brand-soft text-brand'
+            : 'border-line text-dim hover:text-brand'
+        }`}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (canHeart) onHeart();
+        }}
+      >
+        <Heart size={14} fill={iHearted || (!canHeart && hearts > 0) ? 'currentColor' : 'none'} />
+        {hearts > 0 ? hearts : 'Kudos'}
+      </span>
+    </div>
+  );
+}
+
+/** A logged lift session in the feed — sets, volume, time + exercise list. */
+function WorkoutCard({
+  w, who, photo, isPartner, hearts, iHearted, canHeart, onHeart
+}: {
+  w: WorkoutLog;
+  who: string;
+  photo?: string;
+  isPartner: boolean;
+  hearts: number;
+  iHearted: boolean;
+  canHeart: boolean;
+  onHeart: () => void;
+}) {
+  const names = w.exercises.map((e) => e.name);
+  return (
+    <div className="card w-full text-left overflow-hidden">
+      <div className="p-4 pb-3">
+        <div className="flex items-center gap-2.5">
+          {photo ? (
+            <img src={photo} alt={who} className="w-9 h-9 rounded-full object-cover shrink-0" />
+          ) : (
+            <span
+              className={`w-9 h-9 rounded-full font-black flex items-center justify-center text-sm shrink-0 ${
+                isPartner ? 'bg-ink text-white' : 'bg-brand text-white'
+              }`}
+            >
+              {who.slice(0, 1).toUpperCase() || 'R'}
+            </span>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold truncate">{who}</div>
+            <div className="text-[11px] text-dim">{fmtRelDate(w.date)}</div>
+          </div>
+          <span className="chip bg-brand-soft text-brand shrink-0">
+            <Dumbbell size={12} /> Lift
           </span>
         </div>
-      )}
-    </button>
+        <div className="font-black text-lg mt-2.5">{w.name}</div>
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          <CardStat label="Sets" value={`${totalSets(w)}`} />
+          <CardStat label="Volume" value={`${logVolume(w).toLocaleString()} lb`} />
+          <CardStat label="Time" value={fmtClock(w.seconds)} />
+        </div>
+        {names.length > 0 && (
+          <p className="text-xs text-dim mt-2 truncate">
+            {names.slice(0, 4).join(' · ')}{names.length > 4 ? ` · +${names.length - 4} more` : ''}
+          </p>
+        )}
+      </div>
+      <KudosRow hearts={hearts} iHearted={iHearted} canHeart={canHeart} onHeart={onHeart} />
+    </div>
   );
 }
 

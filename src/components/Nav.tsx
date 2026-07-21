@@ -1,6 +1,6 @@
-import { Home, User, Circle, UtensilsCrossed } from 'lucide-react';
+import { Home, User, Circle, UtensilsCrossed, Dumbbell } from 'lucide-react';
 
-export type Tab = 'home' | 'record' | 'nutrition' | 'you';
+export type Tab = 'home' | 'record' | 'train' | 'nutrition' | 'you';
 
 export default function Nav({
   active,
@@ -16,7 +16,7 @@ export default function Nav({
       className="fixed bottom-0 inset-x-0 z-40 border-t border-line bg-card/95 backdrop-blur"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="max-w-[480px] mx-auto grid grid-cols-4">
+      <div className="max-w-[480px] mx-auto grid grid-cols-5">
         <NavButton on={active === 'home'} label="Home" onClick={() => onChange('home')}>
           <Home size={22} strokeWidth={active === 'home' ? 2.5 : 2} />
         </NavButton>
@@ -34,6 +34,10 @@ export default function Nav({
             Record
           </span>
         </button>
+
+        <NavButton on={active === 'train'} label="Train" onClick={() => onChange('train')}>
+          <Dumbbell size={22} strokeWidth={active === 'train' ? 2.5 : 2} />
+        </NavButton>
 
         <NavButton on={active === 'nutrition'} label="Nutrition" onClick={() => onChange('nutrition')}>
           <UtensilsCrossed size={22} strokeWidth={active === 'nutrition' ? 2.5 : 2} />

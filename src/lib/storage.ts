@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RACE_DISTANCES, type LatLng } from './run';
 import type { FoodEntry, NutritionProfile, SavedMeal } from './nutrition';
+import type { WorkoutTemplate, WorkoutLog } from './training';
 
 export const STORAGE_KEY = 'runner:v1';
 const LEGACY_KEY = 'forge:v1';
@@ -30,6 +31,10 @@ export interface Activity {
 
 export interface RunnerData {
   activities: Activity[];
+  training: {
+    templates: WorkoutTemplate[];  // saved/built workouts
+    logs: WorkoutLog[];            // finished sessions
+  };
   nutrition: {
     entries: FoodEntry[];
     meals: SavedMeal[];                  // saved custom meals / favorites
@@ -50,6 +55,7 @@ export interface RunnerData {
 export function defaultData(): RunnerData {
   return {
     activities: [],
+    training: { templates: [], logs: [] },
     nutrition: { entries: [], meals: [], profile: null, apiKey: '' },
     settings: { name: 'Runner', photo: '', accent: 'green', weightLbs: 175, weeklyGoalMiles: 10, runBpm: 170, walkBpm: 120 }
   };
@@ -88,6 +94,7 @@ function migrateLegacy(): RunnerData | null {
     activities.sort((a, b) => a.date.localeCompare(b.date));
     return {
       activities,
+      training: base.training,
       nutrition: base.nutrition,
       settings: {
         ...base.settings,
@@ -119,6 +126,7 @@ export function loadData(): RunnerData {
     const base = defaultData();
     const data: RunnerData = {
       activities: parsed.activities ?? base.activities,
+      training: { ...base.training, ...(parsed.training ?? {}) },
       nutrition: { ...base.nutrition, ...(parsed.nutrition ?? {}) },
       settings: { ...base.settings, ...(parsed.settings ?? {}) }
     };
@@ -357,6 +365,23 @@ export function raceBests(activities: Activity[]): RaceBest[] {
     }
     return { label: d.label, miles: d.miles, seconds: bestSec, exact };
   });
+}
+
+/**
+ * Chronological times for one race distance — every run long enough to cover
+ * it, with the run's average pace projected onto the exact distance. Feeds
+ * the Home progress graph.
+ */
+export function raceTrend(activities: Activity[], miles: number) {
+  return activities
+    .filter((a) => a.miles > 0 && a.seconds > 0 && a.miles + 0.03 >= miles)
+    .map((a) => ({
+      date: a.date,
+      name: a.name,
+      seconds: Math.round((a.seconds / a.miles) * miles),
+      exact: Math.abs(a.miles - miles) < 0.2
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /** Per-day calorie totals for the current week (Mon–Sun) for the Home dashboard. */
