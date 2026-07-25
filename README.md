@@ -89,6 +89,12 @@ same project: **SQL Editor → New query**, paste the entire contents of
 [`supabase/schema_v2_friends.sql`](supabase/schema_v2_friends.sql), and
 Run. Safe to re-run; existing couple links keep working unchanged.
 
+### Sports upgrade (rides, walks, workout intensity)
+One more optional file, [`supabase/schema_v3_sports.sql`](supabase/schema_v3_sports.sql),
+adds the sport tag (run/ride/walk) and workout intensity to the synced
+tables. Without it the app still works — rides and walks just sync
+untagged (they'd show as runs on other devices) until it's run.
+
 ## Develop
 ```bash
 npm install

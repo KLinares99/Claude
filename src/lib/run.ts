@@ -2,6 +2,32 @@
 
 export type LatLng = [number, number];
 
+/** GPS-tracked activity types. Legacy activities without a sport are runs. */
+export type Sport = 'run' | 'ride' | 'walk';
+
+export const SPORTS: { id: Sport; label: string; emoji: string; verb: string }[] = [
+  { id: 'run', label: 'Run', emoji: '🏃', verb: 'Run' },
+  { id: 'ride', label: 'Ride', emoji: '🚴', verb: 'Ride' },
+  { id: 'walk', label: 'Walk', emoji: '🚶', verb: 'Walk' }
+];
+
+export function sportOf(id: string | undefined): (typeof SPORTS)[number] {
+  return SPORTS.find((s) => s.id === id) ?? SPORTS[0];
+}
+
+/** Rides read naturally as speed (mph); runs and walks as pace (min/mi). */
+export function speedMph(seconds: number, miles: number): string {
+  if (seconds <= 0 || miles < 0.01) return '--';
+  return (miles / (seconds / 3600)).toFixed(1);
+}
+
+/** The headline effort stat for a sport: pace for run/walk, speed for ride. */
+export function effortStat(sport: Sport, seconds: number, miles: number): { label: string; value: string; unit: string } {
+  return sport === 'ride'
+    ? { label: 'Avg speed', value: speedMph(seconds, miles), unit: 'mph' }
+    : { label: 'Avg pace', value: paceFor(seconds, miles), unit: '/mi' };
+}
+
 /** Standard race distances (miles) for the live goal + estimated finish. */
 export const RACE_DISTANCES: { label: string; miles: number }[] = [
   { label: '5K', miles: 3.10686 },
@@ -55,24 +81,34 @@ export function paceFor(seconds: number, miles: number): string {
   return fmtTime(seconds / miles);
 }
 
-/** Calories for an arbitrary distance/time using a speed-derived MET. */
-export function caloriesFor(seconds: number, miles: number, weightLbs: number): number {
+/** Calories for a distance/time using a sport-specific, speed-derived MET. */
+export function caloriesFor(seconds: number, miles: number, weightLbs: number, sport: Sport = 'run'): number {
   if (seconds <= 0) return 0;
   const mph = miles / (seconds / 3600);
-  const met = Math.max(3, mph * 1.0 + 3.5); // rough running MET curve
+  let met: number;
+  if (sport === 'ride') {
+    // cycling MET steps (Compendium): easy spin → vigorous
+    met = mph < 10 ? 4 : mph < 12 ? 6 : mph < 14 ? 8 : mph < 16 ? 10 : 12;
+  } else if (sport === 'walk') {
+    // walking: ~2.5 (stroll) up to ~5 (very brisk)
+    met = Math.min(5, Math.max(2.5, mph * 1.2 + 0.5));
+  } else {
+    met = Math.max(3, mph * 1.0 + 3.5); // rough running MET curve
+  }
   const kg = weightLbs * 0.453592;
   return Math.round(met * kg * (seconds / 3600));
 }
 
-/** "Morning Run" / "Lunch Run" / ... — Strava-style default activity name. */
-export function defaultRunName(date = new Date()): string {
+/** "Morning Run" / "Evening Ride" / ... — Strava-style default name. */
+export function defaultRunName(date = new Date(), sport: Sport = 'run'): string {
+  const verb = sportOf(sport).verb;
   const h = date.getHours();
-  if (h < 4) return 'Night Run';
-  if (h < 11) return 'Morning Run';
-  if (h < 14) return 'Lunch Run';
-  if (h < 18) return 'Afternoon Run';
-  if (h < 22) return 'Evening Run';
-  return 'Night Run';
+  if (h < 4) return `Night ${verb}`;
+  if (h < 11) return `Morning ${verb}`;
+  if (h < 14) return `Lunch ${verb}`;
+  if (h < 18) return `Afternoon ${verb}`;
+  if (h < 22) return `Evening ${verb}`;
+  return `Night ${verb}`;
 }
 
 /** "Today", "Yesterday", or "Mon, Jun 30" (+ year when not this year). */

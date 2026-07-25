@@ -8,7 +8,7 @@
  * The in-progress run is snapshotted to localStorage so even a full page
  * reload can recover it (restored in a paused state).
  */
-import { haversineMeters, metersToMiles, type LatLng } from './run';
+import { haversineMeters, metersToMiles, type LatLng, type Sport } from './run';
 import { addActivity, uid, type Activity, type Split } from './storage';
 import { defaultRunName } from './run';
 import { acquireWakeLock, releaseWakeLock } from './wakelock';
@@ -27,6 +27,7 @@ export interface TrackerState {
   startedAt: number | null; // epoch ms of session start
   restored: boolean;        // true if recovered from a reload
   goalMiles: number | null; // target distance (5K, 10K, …) for est. finish
+  sport: Sport;             // what we're recording (run / ride / walk)
 }
 
 const MIN_MOVE_M = 4;      // ignore jitter below this
@@ -36,7 +37,8 @@ const SNAPSHOT_KEY = 'runner:activeRun';
 
 const idleState: TrackerState = {
   phase: 'idle', elapsed: 0, meters: 0, route: [], splits: [],
-  accuracy: null, lastPos: null, error: '', startedAt: null, restored: false, goalMiles: null
+  accuracy: null, lastPos: null, error: '', startedAt: null, restored: false, goalMiles: null,
+  sport: 'run'
 };
 
 let state: TrackerState = { ...idleState };
@@ -79,7 +81,8 @@ function snapshot() {
       startedAt: state.startedAt,
       mileMark,
       splitBaseSec,
-      goalMiles: state.goalMiles
+      goalMiles: state.goalMiles,
+      sport: state.sport
     }));
   } catch { /* ignore */ }
 }
@@ -95,6 +98,7 @@ function restore() {
     const s = JSON.parse(raw) as {
       activeMs: number; meters: number; route: LatLng[]; splits: Split[];
       startedAt: number | null; mileMark: number; splitBaseSec: number; goalMiles?: number | null;
+      sport?: Sport;
     };
     if (!s || typeof s.activeMs !== 'number' || s.activeMs < 1000) return;
     activeMs = s.activeMs;
@@ -111,7 +115,8 @@ function restore() {
       splits: s.splits ?? [],
       startedAt: s.startedAt ?? Date.now(),
       restored: true,
-      goalMiles: s.goalMiles ?? null
+      goalMiles: s.goalMiles ?? null,
+      sport: s.sport ?? 'run'
     };
   } catch { /* ignore */ }
 }
@@ -200,13 +205,14 @@ function stopTicker() {
 // ---- public API ---------------------------------------------------------------
 
 export function trackerStart() {
-  const goalMiles = state.goalMiles; // keep any goal picked before starting
+  const goalMiles = state.goalMiles; // keep goal + sport picked before starting
+  const sport = state.sport;
   activeMs = 0;
   segStart = Date.now();
   lastPt = null;
   mileMark = 1;
   splitBaseSec = 0;
-  state = { ...idleState, phase: 'running', startedAt: Date.now(), goalMiles };
+  state = { ...idleState, phase: 'running', startedAt: Date.now(), goalMiles, sport };
   emit();
   startWatch();
   startTicker();
@@ -218,6 +224,12 @@ export function trackerStart() {
 export function trackerSetGoal(miles: number | null) {
   set({ goalMiles: miles });
   snapshot();
+}
+
+/** Pick what to record (run / ride / walk). Locked once a session starts. */
+export function trackerSetSport(sport: Sport) {
+  if (state.phase !== 'idle') return;
+  set({ sport });
 }
 
 export function trackerPause() {
@@ -255,7 +267,8 @@ export function trackerFinish(name: string, note = ''): Activity | null {
     saved = {
       id: uid(),
       date: new Date(state.startedAt ?? Date.now()).toISOString(),
-      name: name.trim() || defaultRunName(new Date(state.startedAt ?? Date.now())),
+      name: name.trim() || defaultRunName(new Date(state.startedAt ?? Date.now()), state.sport),
+      sport: state.sport,
       seconds,
       miles,
       route: state.route,

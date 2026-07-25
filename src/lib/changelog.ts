@@ -13,6 +13,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: 8,
+    date: '2026-07-23',
+    title: 'Rides, walks & workout intensity',
+    points: [
+      'Record now tracks three sports — pick Run, Ride or Walk before you start. Rides show speed (mph), and calories adjust to the sport.',
+      'Log rides and walks manually too, and see each sport tagged in the feed.',
+      'Workouts now log an intensity (Light → Max, RPE-anchored) when you finish — it shows on the feed and in your history next to duration.',
+      'Race PRs and the Progress graph stay runs-only, so a bike ride never inflates your 5K time.'
+    ]
+  },
+  {
     v: 7,
     date: '2026-07-21',
     title: 'Lift days, friends & progress graphs',

@@ -6,9 +6,9 @@ import {
   type Activity
 } from '../lib/storage';
 import { syncSubscribe, syncGet, toggleKudos } from '../lib/sync';
-import { logVolume, totalSets, type WorkoutLog } from '../lib/training';
+import { logVolume, totalSets, intensityOf, type WorkoutLog } from '../lib/training';
 import { accentHex } from '../lib/theme';
-import { fmtClock, paceFor, fmtRelDate, defaultRunName, RACE_DISTANCES } from '../lib/run';
+import { fmtClock, fmtRelDate, defaultRunName, RACE_DISTANCES, SPORTS, sportOf, effortStat, type Sport } from '../lib/run';
 import { dayTotals, calorieTarget, localDateISO } from '../lib/nutrition';
 import RoutePreview from '../components/ui/RoutePreview';
 import Mascot from '../components/Mascot';
@@ -78,7 +78,7 @@ export default function Home() {
         <div className="grid grid-cols-3 gap-2 mt-3">
           <WeekStat label="Distance" value={week.miles.toFixed(1)} unit="mi" />
           <WeekStat label="Time" value={fmtClock(week.seconds)} />
-          <WeekStat label="Runs" value={`${week.runs}`} />
+          <WeekStat label="Activities" value={`${week.runs}`} />
         </div>
 
         {/* 7-day strip — per-day mileage, today highlighted */}
@@ -522,12 +522,20 @@ function ActivityCard({
             <div className="text-sm font-bold truncate">{who}</div>
             <div className="text-[11px] text-dim">{fmtRelDate(a.date)}</div>
           </div>
+          {(a.sport ?? 'run') !== 'run' && (
+            <span className="chip bg-brand-soft text-brand shrink-0">
+              {sportOf(a.sport).emoji} {sportOf(a.sport).label}
+            </span>
+          )}
           <ChevronRight size={18} className="text-faint" />
         </div>
         <div className="font-black text-lg mt-2.5">{a.name}</div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <CardStat label="Distance" value={`${a.miles.toFixed(2)} mi`} />
-          <CardStat label="Pace" value={`${paceFor(a.seconds, a.miles)}/mi`} />
+          <CardStat
+            label={effortStat(a.sport ?? 'run', a.seconds, a.miles).label}
+            value={`${effortStat(a.sport ?? 'run', a.seconds, a.miles).value}${effortStat(a.sport ?? 'run', a.seconds, a.miles).unit === 'mph' ? ' mph' : '/mi'}`}
+          />
           <CardStat label="Time" value={fmtClock(a.seconds)} />
         </div>
       </div>
@@ -606,7 +614,14 @@ function WorkoutCard({
             <Dumbbell size={12} /> Lift
           </span>
         </div>
-        <div className="font-black text-lg mt-2.5">{w.name}</div>
+        <div className="font-black text-lg mt-2.5 flex items-center gap-2">
+          <span className="truncate">{w.name}</span>
+          {intensityOf(w.intensity) && (
+            <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-brand bg-brand-soft rounded px-1.5 py-0.5">
+              {intensityOf(w.intensity)?.label} · {intensityOf(w.intensity)?.rpe}
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <CardStat label="Sets" value={`${totalSets(w)}`} />
           <CardStat label="Volume" value={`${logVolume(w).toLocaleString()} lb`} />
@@ -633,11 +648,19 @@ function CardStat({ label, value }: { label: string; value: string }) {
 }
 
 function ManualLogSheet({ onClose, onSave }: { onClose: () => void; onSave: (a: Activity) => void }) {
+  const [sport, setSport] = useState<Sport>('run');
   const [name, setName] = useState(defaultRunName());
+  const [nameTouched, setNameTouched] = useState(false);
   const [miles, setMiles] = useState('');
   const [min, setMin] = useState('');
   const [sec, setSec] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const pickSport = (sp: Sport) => {
+    setSport(sp);
+    // keep the default name in step with the sport until the user edits it
+    if (!nameTouched) setName(defaultRunName(new Date(), sp));
+  };
 
   const submit = () => {
     const mi = parseFloat(miles || '0');
@@ -646,7 +669,8 @@ function ManualLogSheet({ onClose, onSave }: { onClose: () => void; onSave: (a: 
     onSave({
       id: uid(),
       date: `${date}T12:00:00`,
-      name: name.trim() || 'Run',
+      name: name.trim() || sportOf(sport).verb,
+      sport,
       seconds: total,
       miles: +mi.toFixed(2),
       route: [],
@@ -664,9 +688,22 @@ function ManualLogSheet({ onClose, onSave }: { onClose: () => void; onSave: (a: 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="w-10 h-1 rounded-full bg-line mx-auto sm:hidden" />
-        <h2 className="text-lg font-black">Log a run</h2>
+        <h2 className="text-lg font-black">Log an activity</h2>
+        <div className="flex gap-2">
+          {SPORTS.map((sp) => (
+            <button
+              key={sp.id}
+              onClick={() => pickSport(sp.id)}
+              className={`flex-1 rounded-xl py-2 text-sm font-bold border transition-colors ${
+                sport === sp.id ? 'border-brand bg-brand-soft text-brand' : 'border-line text-dim hover:text-ink'
+              }`}
+            >
+              {sp.emoji} {sp.label}
+            </button>
+          ))}
+        </div>
         <Field label="Name">
-          <input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="input w-full" value={name} onChange={(e) => { setName(e.target.value); setNameTouched(true); }} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Distance (mi)">

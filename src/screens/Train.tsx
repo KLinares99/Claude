@@ -10,8 +10,8 @@ import {
 } from '../data/exercises';
 import {
   liftSubscribe, liftGet, liftStart, liftAddPlanned, liftLogSet, liftRemoveSet, liftFinish, liftDiscard,
-  saveTemplate, deleteTemplate, deleteLog, logVolume, totalSets,
-  type TemplateExercise, type WorkoutLog
+  saveTemplate, deleteTemplate, deleteLog, logVolume, totalSets, INTENSITIES, intensityOf,
+  type TemplateExercise, type WorkoutLog, type Intensity
 } from '../lib/training';
 import { deleteRemoteWorkout } from '../lib/sync';
 import { fmtClock, fmtRelDate } from '../lib/run';
@@ -651,8 +651,8 @@ function LiveWorkout({ onShowDetail }: { onShowDetail: (e: Exercise) => void }) 
           volume={volume}
           elapsed={s.elapsed}
           onCancel={() => setFinishing(false)}
-          onConfirm={() => {
-            const saved = liftFinish();
+          onConfirm={(intensity) => {
+            const saved = liftFinish(intensity);
             setFinishing(false);
             toast(saved ? `${saved.name} saved — ${totalSets(saved)} sets, ${logVolume(saved).toLocaleString()} lbs` : 'Nothing logged — workout discarded');
           }}
@@ -744,7 +744,8 @@ function ExerciseLogCard({
 
 function FinishSheet({
   setsDone, volume, elapsed, onCancel, onConfirm
-}: { setsDone: number; volume: number; elapsed: number; onCancel: () => void; onConfirm: () => void }) {
+}: { setsDone: number; volume: number; elapsed: number; onCancel: () => void; onConfirm: (intensity?: Intensity) => void }) {
+  const [intensity, setIntensity] = useState<Intensity | null>('moderate');
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onCancel}>
       <div
@@ -765,7 +766,33 @@ function FinishSheet({
           <SheetStat label="Volume" value={`${Math.round(volume).toLocaleString()} lb`} />
           <SheetStat label="Time" value={fmtClock(elapsed)} />
         </div>
-        <button className="btn-primary w-full py-3" onClick={onConfirm}>Save workout</button>
+
+        {/* how hard was it? */}
+        <div>
+          <div className="label mb-1.5">Intensity — how hard did it feel?</div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {INTENSITIES.map((i) => {
+              const on = intensity === i.id;
+              return (
+                <button
+                  key={i.id}
+                  onClick={() => setIntensity(on ? null : i.id)}
+                  className={`rounded-xl py-2 text-center border transition-colors ${
+                    on ? 'border-brand bg-brand-soft text-brand' : 'border-line text-dim hover:text-ink'
+                  }`}
+                >
+                  <span className="block text-xs font-black">{i.label}</span>
+                  <span className="block text-[9px] font-bold opacity-70">{i.rpe}</span>
+                </button>
+              );
+            })}
+          </div>
+          {intensity && (
+            <p className="text-[11px] text-dim mt-1.5">{INTENSITIES.find((i) => i.id === intensity)?.desc}</p>
+          )}
+        </div>
+
+        <button className="btn-primary w-full py-3" onClick={() => onConfirm(intensity ?? undefined)}>Save workout</button>
         <button className="btn-ghost w-full" onClick={onCancel}>Keep lifting</button>
       </div>
     </div>
@@ -786,7 +813,14 @@ function WorkoutHistory({ logs }: { logs: WorkoutLog[] }) {
         {recent.map((l) => (
           <div key={l.id} className="py-2.5 flex items-center gap-2">
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold truncate">{l.name}</div>
+              <div className="text-sm font-bold truncate flex items-center gap-1.5">
+                <span className="truncate">{l.name}</span>
+                {intensityOf(l.intensity) && (
+                  <span className="shrink-0 text-[9px] font-black uppercase tracking-wide text-brand bg-brand-soft rounded px-1.5 py-px">
+                    {intensityOf(l.intensity)?.label}
+                  </span>
+                )}
+              </div>
               <div className="text-[11px] text-dim nums">
                 {fmtRelDate(l.date)} · {totalSets(l)} sets · {logVolume(l).toLocaleString()} lbs · {fmtClock(l.seconds)}
               </div>

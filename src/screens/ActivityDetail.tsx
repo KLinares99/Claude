@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { X, Trash2, Pencil, Check, Share2, Play, Square, Layers } from 'lucide-react';
 import { useStore, type Activity } from '../lib/storage';
 import { deleteRemoteActivity } from '../lib/sync';
-import { fmtClock, paceFor, fmtRelDate, caloriesFor, haversineMeters, type LatLng } from '../lib/run';
+import { fmtClock, fmtRelDate, caloriesFor, haversineMeters, effortStat, sportOf, type LatLng } from '../lib/run';
 import { accentHex } from '../lib/theme';
 import { toast } from '../lib/toast';
 import ShareCard from './ShareCard';
@@ -181,7 +181,7 @@ export default function ActivityDetail({
           <button onClick={onClose} className="p-1 -ml-1 text-dim hover:text-ink" aria-label="Close">
             <X size={24} />
           </button>
-          <span className="text-sm font-bold">{fmtRelDate(activity.date)}</span>
+          <span className="text-sm font-bold">{sportOf(activity.sport).emoji} {fmtRelDate(activity.date)}</span>
           <div className="flex items-center gap-1">
             <button onClick={() => setSharing(true)} className="p-1 text-dim hover:text-brand" aria-label="Share">
               <Share2 size={20} />
@@ -251,8 +251,12 @@ export default function ActivityDetail({
         <div className="card-pad grid grid-cols-2 gap-4">
           <DetailStat label="Distance" value={activity.miles.toFixed(2)} unit="mi" big />
           <DetailStat label="Moving time" value={fmtClock(activity.seconds)} big />
-          <DetailStat label="Avg pace" value={paceFor(activity.seconds, activity.miles)} unit="/mi" />
-          <DetailStat label="Calories" value={`${caloriesFor(activity.seconds, activity.miles, data.settings.weightLbs)}`} />
+          <DetailStat
+            label={effortStat(activity.sport ?? 'run', activity.seconds, activity.miles).label}
+            value={effortStat(activity.sport ?? 'run', activity.seconds, activity.miles).value}
+            unit={effortStat(activity.sport ?? 'run', activity.seconds, activity.miles).unit}
+          />
+          <DetailStat label="Calories" value={`${caloriesFor(activity.seconds, activity.miles, data.settings.weightLbs, activity.sport ?? 'run')}`} />
         </div>
 
         {/* splits */}

@@ -13,7 +13,7 @@
  */
 import { createClient, type SupabaseClient, type Session } from '@supabase/supabase-js';
 import { getData, mutateStore, onStoreChange, type Activity } from './storage';
-import type { WorkoutLog, LoggedExercise } from './training';
+import type { WorkoutLog, LoggedExercise, Intensity } from './training';
 
 // Fill these in to skip the paste-config step on every device:
 // Runner's Supabase project. The anon key is public by design — row-level
@@ -182,6 +182,7 @@ interface ActivityRow {
   id: string;
   date: string;
   name: string;
+  sport?: string;   // added in schema v3 — absent on older servers
   seconds: number;
   miles: number;
   route: [number, number][];
@@ -192,17 +193,26 @@ interface ActivityRow {
 
 function toRow(a: Activity, userId: string): ActivityRow {
   return {
-    user_id: userId, id: a.id, date: a.date, name: a.name, seconds: a.seconds,
-    miles: a.miles, route: a.route, splits: a.splits, source: a.source, note: a.note
+    user_id: userId, id: a.id, date: a.date, name: a.name, sport: a.sport ?? 'run',
+    seconds: a.seconds, miles: a.miles, route: a.route, splits: a.splits,
+    source: a.source, note: a.note
   };
 }
 
 function fromRow(r: ActivityRow): Activity {
   return {
-    id: r.id, date: r.date, name: r.name, seconds: r.seconds, miles: r.miles,
+    id: r.id, date: r.date, name: r.name,
+    sport: r.sport === 'ride' || r.sport === 'walk' ? r.sport : 'run',
+    seconds: r.seconds, miles: r.miles,
     route: r.route ?? [], splits: r.splits ?? [],
     source: r.source === 'gps' ? 'gps' : 'manual', note: r.note ?? ''
   };
+}
+
+/** True when an upsert failed only because the server lacks a v3 column. */
+function isMissingColumn(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String((err as { message?: string })?.message ?? err);
+  return /column|schema cache/i.test(msg);
 }
 
 /**
@@ -230,11 +240,17 @@ export async function syncNow(): Promise<void> {
       });
     }
 
-    // 2. push everything local (upsert = no-op when unchanged content-wise)
+    // 2. push everything local (upsert = no-op when unchanged content-wise).
+    //    If the server predates the sport column (schema v3), retry without it.
     const rows = getData().activities.map((a) => toRow(a, uid));
     if (rows.length > 0) {
       const up = await c.from('activities').upsert(rows, { onConflict: 'user_id,id' });
-      if (up.error) throw up.error;
+      if (up.error) {
+        if (!isMissingColumn(up.error)) throw up.error;
+        const stripped = rows.map(({ sport: _sport, ...rest }) => rest);
+        const retry = await c.from('activities').upsert(stripped, { onConflict: 'user_id,id' });
+        if (retry.error) throw retry.error;
+      }
     }
 
     // 3. profiles (me + partner + friends, per RLS) — partner found by id,
@@ -287,8 +303,15 @@ export async function syncNow(): Promise<void> {
     try {
       const myLogs = getData().training.logs;
       if (myLogs.length > 0) {
-        const up = await c.from('workout_logs').upsert(myLogs.map((l) => toWorkoutRow(l, uid)), { onConflict: 'user_id,id' });
-        if (up.error) throw up.error;
+        const wrows = myLogs.map((l) => toWorkoutRow(l, uid));
+        const up = await c.from('workout_logs').upsert(wrows, { onConflict: 'user_id,id' });
+        if (up.error) {
+          // pre-v3 server: retry without the intensity column
+          if (!isMissingColumn(up.error)) throw up.error;
+          const stripped = wrows.map(({ intensity: _i, ...rest }) => rest);
+          const retry = await c.from('workout_logs').upsert(stripped, { onConflict: 'user_id,id' });
+          if (retry.error) throw retry.error;
+        }
       }
       const w = await c.from('workout_logs').select('*').order('date', { ascending: false }).limit(200);
       if (w.error) throw w.error;
@@ -333,6 +356,7 @@ interface WorkoutRow {
   name: string;
   seconds: number;
   volume: number;
+  intensity?: string | null;  // added in schema v3 — absent on older servers
   exercises: LoggedExercise[];
 }
 
@@ -341,12 +365,19 @@ function toWorkoutRow(l: WorkoutLog, userId: string): WorkoutRow {
   for (const e of l.exercises) for (const s of e.sets) volume += s.reps * s.weight;
   return {
     user_id: userId, id: l.id, date: l.date, name: l.name,
-    seconds: l.seconds, volume: Math.round(volume), exercises: l.exercises
+    seconds: l.seconds, volume: Math.round(volume),
+    intensity: l.intensity ?? null, exercises: l.exercises
   };
 }
 
+const INTENSITY_IDS = ['light', 'moderate', 'hard', 'max'];
+
 function fromWorkoutRow(r: WorkoutRow): WorkoutLog {
-  return { id: r.id, date: r.date, name: r.name, seconds: r.seconds, exercises: r.exercises ?? [] };
+  return {
+    id: r.id, date: r.date, name: r.name, seconds: r.seconds,
+    intensity: r.intensity && INTENSITY_IDS.includes(r.intensity) ? (r.intensity as Intensity) : undefined,
+    exercises: r.exercises ?? []
+  };
 }
 
 // ---- friends API -------------------------------------------------------------

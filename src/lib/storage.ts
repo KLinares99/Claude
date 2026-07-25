@@ -5,7 +5,7 @@
  * become Activities, so no history is lost.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { RACE_DISTANCES, type LatLng } from './run';
+import { RACE_DISTANCES, type LatLng, type Sport } from './run';
 import type { FoodEntry, NutritionProfile, SavedMeal } from './nutrition';
 import type { WorkoutTemplate, WorkoutLog } from './training';
 
@@ -19,8 +19,9 @@ export interface Split {
 
 export interface Activity {
   id: string;
-  date: string;        // ISO datetime of when the run started
+  date: string;        // ISO datetime of when the activity started
   name: string;
+  sport: Sport;        // run | ride | walk (legacy data defaults to run)
   seconds: number;     // moving time
   miles: number;
   route: LatLng[];     // empty for manual entries
@@ -81,13 +82,13 @@ function migrateLegacy(): RunnerData | null {
     for (const r of old.runs ?? []) {
       if (r.id.startsWith('seed-')) continue; // drop demo seed data
       activities.push({
-        id: `mig-${r.id}`, date: `${r.date}T12:00:00`, name: 'Loop Run',
+        id: `mig-${r.id}`, date: `${r.date}T12:00:00`, name: 'Loop Run', sport: 'run',
         seconds: r.seconds, miles: 3.2, route: [], splits: [], source: 'manual', note: r.note ?? ''
       });
     }
     for (const g of old.gpsRuns ?? []) {
       activities.push({
-        id: `mig-${g.id}`, date: `${g.date}T12:00:00`, name: 'Run',
+        id: `mig-${g.id}`, date: `${g.date}T12:00:00`, name: 'Run', sport: 'run',
         seconds: g.seconds, miles: g.miles, route: g.route ?? [], splits: [], source: 'gps', note: g.note ?? ''
       });
     }
@@ -125,7 +126,8 @@ export function loadData(): RunnerData {
     const parsed = JSON.parse(raw) as Partial<RunnerData>;
     const base = defaultData();
     const data: RunnerData = {
-      activities: parsed.activities ?? base.activities,
+      // legacy activities predate the sport field — they were all runs
+      activities: (parsed.activities ?? base.activities).map((a) => ({ ...a, sport: a.sport ?? 'run' })),
       training: { ...base.training, ...(parsed.training ?? {}) },
       nutrition: { ...base.nutrition, ...(parsed.nutrition ?? {}) },
       settings: { ...base.settings, ...(parsed.settings ?? {}) }
@@ -316,7 +318,7 @@ export function computeStreak(activities: Activity[]): number {
   return streak;
 }
 
-/** All-time totals + best efforts, Strava-style. */
+/** All-time totals (all sports) + run-only best efforts, Strava-style. */
 export function bestEfforts(activities: Activity[]) {
   const totalMiles = activities.reduce((s, a) => s + a.miles, 0);
   const totalSeconds = activities.reduce((s, a) => s + a.seconds, 0);
@@ -325,7 +327,8 @@ export function bestEfforts(activities: Activity[]) {
   let fastestPace: Activity | null = null; // best avg pace, runs >= 1 mi
   let fastestMileSec: number | null = null; // fastest full-mile split
 
-  for (const a of activities) {
+  const runs = activities.filter((a) => (a.sport ?? 'run') === 'run');
+  for (const a of runs) {
     if (!longest || a.miles > longest.miles) longest = a;
     if (a.miles >= 1) {
       if (!fastestPace || a.seconds / a.miles < fastestPace.seconds / fastestPace.miles) fastestPace = a;
@@ -356,6 +359,7 @@ export function raceBests(activities: Activity[]): RaceBest[] {
     let bestSec: number | null = null;
     let exact = false;
     for (const a of activities) {
+      if ((a.sport ?? 'run') !== 'run') continue; // race PRs are runs only
       if (a.miles <= 0 || a.miles + 0.03 < d.miles) continue;
       const projected = (a.seconds / a.miles) * d.miles;
       if (bestSec === null || projected < bestSec) {
@@ -374,7 +378,7 @@ export function raceBests(activities: Activity[]): RaceBest[] {
  */
 export function raceTrend(activities: Activity[], miles: number) {
   return activities
-    .filter((a) => a.miles > 0 && a.seconds > 0 && a.miles + 0.03 >= miles)
+    .filter((a) => (a.sport ?? 'run') === 'run' && a.miles > 0 && a.seconds > 0 && a.miles + 0.03 >= miles)
     .map((a) => ({
       date: a.date,
       name: a.name,

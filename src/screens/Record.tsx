@@ -2,10 +2,13 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Play, Pause, Square, Satellite } from 'lucide-react';
-import { fmtClock, paceFor, metersToMiles, caloriesFor, defaultRunName, RACE_DISTANCES, type LatLng } from '../lib/run';
+import {
+  fmtClock, paceFor, metersToMiles, caloriesFor, defaultRunName, RACE_DISTANCES,
+  SPORTS, effortStat, type LatLng, type Sport
+} from '../lib/run';
 import {
   trackerSubscribe, trackerGet, trackerStart, trackerPause, trackerResume,
-  trackerFinish, trackerDiscard, trackerSetGoal
+  trackerFinish, trackerDiscard, trackerSetGoal, trackerSetSport
 } from '../lib/tracker';
 import { useStore } from '../lib/storage';
 import { accentHex } from '../lib/theme';
@@ -78,7 +81,8 @@ export default function Record({ active }: { active: boolean }) {
   }, [s.route, s.lastPos, s.phase]);
 
   const miles = metersToMiles(s.meters);
-  const cals = caloriesFor(s.elapsed, miles, data.settings.weightLbs);
+  const cals = caloriesFor(s.elapsed, miles, data.settings.weightLbs, s.sport);
+  const effort = effortStat(s.sport, s.elapsed, miles);
 
   return (
     <>
@@ -100,6 +104,25 @@ export default function Record({ active }: { active: boolean }) {
 
       {/* GPS run — the map stays in the DOM even in intervals mode */}
       <div className={mode === 'run' ? 'space-y-4' : 'hidden'}>
+        {/* sport picker — locked once the session starts */}
+        <div className="flex gap-2">
+          {SPORTS.map((sp) => {
+            const on = s.sport === sp.id;
+            return (
+              <button
+                key={sp.id}
+                disabled={s.phase !== 'idle'}
+                onClick={() => trackerSetSport(sp.id as Sport)}
+                className={`flex-1 rounded-xl py-2 text-sm font-bold border transition-colors disabled:opacity-50 ${
+                  on ? 'border-brand bg-brand-soft text-brand' : 'border-line bg-card text-dim hover:text-ink'
+                }`}
+              >
+                {sp.emoji} {sp.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* isolate traps leaflet's internal z-indexes so the map can't
             paint over the app header, nav or modals */}
         <div className="card !p-0 overflow-hidden relative isolate">
@@ -126,7 +149,7 @@ export default function Record({ active }: { active: boolean }) {
           </div>
           <div className="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-line">
             <LiveStat label="Distance" value={miles.toFixed(2)} unit="mi" />
-            <LiveStat label="Avg pace" value={paceFor(s.elapsed, miles)} unit="/mi" />
+            <LiveStat label={effort.label} value={effort.value} unit={effort.unit} />
             <LiveStat label="Calories" value={`${cals}`} />
           </div>
           {s.splits.length > 0 && (
@@ -205,6 +228,7 @@ export default function Record({ active }: { active: boolean }) {
         <SaveSheet
           seconds={s.elapsed}
           miles={miles}
+          sport={s.sport}
           startedAt={s.startedAt}
           onResume={() => setSaving(false)}
           onDiscard={() => {
@@ -298,16 +322,17 @@ function LiveStat({ label, value, unit }: { label: string; value: string; unit?:
 }
 
 function SaveSheet({
-  seconds, miles, startedAt, onSave, onResume, onDiscard
+  seconds, miles, sport, startedAt, onSave, onResume, onDiscard
 }: {
   seconds: number;
   miles: number;
+  sport: Sport;
   startedAt: number | null;
   onSave: (name: string) => void;
   onResume: () => void;
   onDiscard: () => void;
 }) {
-  const [name, setName] = useState(() => defaultRunName(new Date(startedAt ?? Date.now())));
+  const [name, setName] = useState(() => defaultRunName(new Date(startedAt ?? Date.now()), sport));
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onResume}>
       <div
@@ -327,7 +352,7 @@ function SaveSheet({
         <div className="grid grid-cols-3 gap-2">
           <SheetStat label="Distance" value={`${miles.toFixed(2)} mi`} />
           <SheetStat label="Time" value={fmtClock(seconds)} />
-          <SheetStat label="Avg pace" value={`${paceFor(seconds, miles)}/mi`} />
+          <SheetStat label={effortStat(sport, seconds, miles).label} value={`${effortStat(sport, seconds, miles).value}${effortStat(sport, seconds, miles).unit === 'mph' ? ' mph' : '/mi'}`} />
         </div>
         <button className="btn-primary w-full py-3 text-base" onClick={() => onSave(name)}>Save run</button>
         <div className="flex gap-2">

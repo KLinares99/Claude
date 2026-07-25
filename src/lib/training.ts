@@ -37,12 +37,27 @@ export interface LoggedExercise {
   sets: LoggedSet[];
 }
 
+/** How hard the session felt, on an RPE-anchored 4-step scale. */
+export type Intensity = 'light' | 'moderate' | 'hard' | 'max';
+
+export const INTENSITIES: { id: Intensity; label: string; rpe: string; desc: string }[] = [
+  { id: 'light', label: 'Light', rpe: 'RPE 1–4', desc: 'Easy — could chat the whole time' },
+  { id: 'moderate', label: 'Moderate', rpe: 'RPE 5–6', desc: 'Working, but reps left in the tank' },
+  { id: 'hard', label: 'Hard', rpe: 'RPE 7–8', desc: '1–3 reps from failure on top sets' },
+  { id: 'max', label: 'Max', rpe: 'RPE 9–10', desc: 'At or past failure — big effort' }
+];
+
+export function intensityOf(id: string | undefined | null) {
+  return INTENSITIES.find((i) => i.id === id) ?? null;
+}
+
 /** A finished workout session. */
 export interface WorkoutLog {
   id: string;
   date: string;         // ISO datetime the session started
   name: string;
   seconds: number;      // total session time
+  intensity?: Intensity; // how hard it felt (optional on old logs)
   exercises: LoggedExercise[];
 }
 
@@ -205,7 +220,7 @@ export function liftRemoveSet(exId: string, setIndex: number) {
 }
 
 /** Finish → persist as a WorkoutLog (if any sets were logged) and reset. */
-export function liftFinish(): WorkoutLog | null {
+export function liftFinish(intensity?: Intensity): WorkoutLog | null {
   if (!session.active) return null;
   let saved: WorkoutLog | null = null;
   if (session.entries.length > 0) {
@@ -214,6 +229,7 @@ export function liftFinish(): WorkoutLog | null {
       date: new Date(session.startedAt ?? Date.now()).toISOString(),
       name: session.name,
       seconds: Math.floor((Date.now() - (session.startedAt ?? Date.now())) / 1000),
+      intensity,
       exercises: session.entries
     };
     const log = saved;
