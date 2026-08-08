@@ -28,17 +28,22 @@ export interface TrackerState {
   restored: boolean;        // true if recovered from a reload
   goalMiles: number | null; // target distance (5K, 10K, …) for est. finish
   sport: Sport;             // what we're recording (run / ride / walk)
+  bridgedMeters: number;    // distance credited across GPS gaps (backgrounding)
 }
 
 const MIN_MOVE_M = 4;      // ignore jitter below this
-const MAX_JUMP_M = 150;    // ignore GPS teleports above this
+const MAX_JUMP_M = 150;    // instant teleports above this need bridging rules
 const MAX_ACCURACY_M = 40; // don't trust worse fixes for distance
+const BRIDGE_MIN_GAP_S = 15; // a jump only counts as a real gap after this long
+
+/** Fastest believable sustained speed per sport (m/s) for gap bridging. */
+const MAX_SPEED: Record<string, number> = { run: 6.5, walk: 3.0, ride: 16 };
 const SNAPSHOT_KEY = 'runner:activeRun';
 
 const idleState: TrackerState = {
   phase: 'idle', elapsed: 0, meters: 0, route: [], splits: [],
   accuracy: null, lastPos: null, error: '', startedAt: null, restored: false, goalMiles: null,
-  sport: 'run'
+  sport: 'run', bridgedMeters: 0
 };
 
 let state: TrackerState = { ...idleState };
@@ -48,6 +53,7 @@ let state: TrackerState = { ...idleState };
 let activeMs = 0;
 let segStart: number | null = null;
 let lastPt: LatLng | null = null;
+let lastFixAt: number | null = null; // wall-clock ms of the last counted fix
 let watchId: number | null = null;
 let ticker: number | null = null;
 let mileMark = 1;          // next full mile to record a split at
@@ -82,7 +88,8 @@ function snapshot() {
       mileMark,
       splitBaseSec,
       goalMiles: state.goalMiles,
-      sport: state.sport
+      sport: state.sport,
+      bridgedMeters: state.bridgedMeters
     }));
   } catch { /* ignore */ }
 }
@@ -98,7 +105,7 @@ function restore() {
     const s = JSON.parse(raw) as {
       activeMs: number; meters: number; route: LatLng[]; splits: Split[];
       startedAt: number | null; mileMark: number; splitBaseSec: number; goalMiles?: number | null;
-      sport?: Sport;
+      sport?: Sport; bridgedMeters?: number;
     };
     if (!s || typeof s.activeMs !== 'number' || s.activeMs < 1000) return;
     activeMs = s.activeMs;
@@ -116,7 +123,8 @@ function restore() {
       startedAt: s.startedAt ?? Date.now(),
       restored: true,
       goalMiles: s.goalMiles ?? null,
-      sport: s.sport ?? 'run'
+      sport: s.sport ?? 'run',
+      bridgedMeters: s.bridgedMeters ?? 0
     };
   } catch { /* ignore */ }
 }
@@ -134,29 +142,56 @@ function onPosition(pos: GeolocationPosition) {
     if (lastPt) {
       const d = haversineMeters(lastPt, p);
       if (d >= MIN_MOVE_M && d <= MAX_JUMP_M) {
-        const meters = state.meters + d;
-        const route = [...state.route, p];
-        lastPt = p;
-        const elapsed = nowElapsedSec();
-        let splits = state.splits;
-        // record a split each time cumulative distance crosses a full mile
-        if (metersToMiles(meters) >= mileMark) {
-          splits = [...splits, { miles: 1, seconds: elapsed - splitBaseSec }];
-          splitBaseSec = elapsed;
-          mileMark += 1;
-        }
-        set({ ...patch, meters, route, splits, elapsed });
-        snapshot();
+        acceptFix(p, d, patch, 0);
         return;
+      }
+      if (d > MAX_JUMP_M) {
+        // Big jump. If enough wall time passed (phone was in another app /
+        // screen off — browsers suspend GPS then) AND the implied speed is
+        // believable for this sport, credit the straight-line distance
+        // instead of throwing the whole gap away. Anything faster is a GPS
+        // teleport and is still ignored.
+        const gapSec = lastFixAt ? (Date.now() - lastFixAt) / 1000 : 0;
+        const maxSpeed = MAX_SPEED[state.sport] ?? 6.5;
+        if (gapSec >= BRIDGE_MIN_GAP_S && d / gapSec <= maxSpeed) {
+          acceptFix(p, d, patch, d);
+          return;
+        }
       }
       // jitter / teleport — keep the fix for the dot, don't add distance
     } else {
       lastPt = p;
+      lastFixAt = Date.now();
       set({ ...patch, route: state.route.length === 0 ? [p] : state.route });
       return;
     }
   }
   set(patch);
+}
+
+/** Count a fix: add distance, extend the route, close any crossed splits.
+ *  `bridged` > 0 marks the distance as credited across a GPS gap. */
+function acceptFix(p: LatLng, d: number, patch: Partial<TrackerState>, bridged: number) {
+  const meters = state.meters + d;
+  const route = [...state.route, p];
+  lastPt = p;
+  lastFixAt = Date.now();
+  const elapsed = nowElapsedSec();
+  let splits = state.splits;
+  // close a split for every full mile crossed (a long bridge can cross
+  // several) — the gap's time is split evenly across them
+  const crossings: number[] = [];
+  while (metersToMiles(meters) >= mileMark) {
+    crossings.push(mileMark);
+    mileMark += 1;
+  }
+  if (crossings.length > 0) {
+    const per = Math.max(1, Math.round((elapsed - splitBaseSec) / crossings.length));
+    splits = [...splits, ...crossings.map(() => ({ miles: 1, seconds: per }))];
+    splitBaseSec = elapsed;
+  }
+  set({ ...patch, meters, route, splits, elapsed, bridgedMeters: state.bridgedMeters + bridged });
+  snapshot();
 }
 
 function onGpsError(err: GeolocationPositionError) {
@@ -237,6 +272,7 @@ export function trackerPause() {
   activeMs += segStart !== null ? Date.now() - segStart : 0;
   segStart = null;
   lastPt = null; // don't count the paused gap on resume
+  lastFixAt = null;
   set({ phase: 'paused', elapsed: Math.floor(activeMs / 1000) });
   snapshot();
 }
@@ -274,7 +310,10 @@ export function trackerFinish(name: string, note = ''): Activity | null {
       route: state.route,
       splits,
       source: 'gps',
-      note
+      note: state.bridgedMeters > 80
+        ? [note, `Includes ${metersToMiles(state.bridgedMeters).toFixed(2)} mi bridged across GPS gaps (phone was in another app).`]
+            .filter(Boolean).join(' ')
+        : note
     };
     addActivity(saved);
   }
@@ -290,6 +329,7 @@ export function trackerDiscard() {
   activeMs = 0;
   segStart = null;
   lastPt = null;
+  lastFixAt = null;
   mileMark = 1;
   splitBaseSec = 0;
   clearSnapshot();

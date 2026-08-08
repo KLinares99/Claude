@@ -174,6 +174,20 @@ export default function Record({ active }: { active: boolean }) {
             Your run was recovered after a reload — resume when ready.
           </div>
         )}
+        {s.bridgedMeters > 0 && (
+          <div className="card-pad border-l-4 !border-l-good text-sm text-dim">
+            <span className="font-bold text-ink">GPS gap bridged.</span> Your phone paused GPS while
+            you were in another app, so {metersToMiles(s.bridgedMeters).toFixed(2)} mi was credited
+            in a straight line — time kept counting the whole way. For an exact route, keep Runner
+            on screen.
+          </div>
+        )}
+        {s.phase === 'idle' && (
+          <p className="text-[11px] text-faint text-center px-4">
+            Phones pause GPS when you switch apps or lock the screen. Your time always keeps
+            counting, and distance gaps are bridged — but keep Runner on screen for the exact route.
+          </p>
+        )}
 
         {/* controls */}
         {s.phase === 'idle' && (

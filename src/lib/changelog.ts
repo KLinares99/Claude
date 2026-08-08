@@ -13,6 +13,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: 9,
+    date: '2026-07-24',
+    title: 'No more lost distance',
+    points: [
+      'Swiped to another app mid-run? Phones pause GPS in the background (a platform rule for web apps), but Runner now bridges the gap: when you come back, the distance you covered is credited in a straight line instead of vanishing.',
+      'Your time was never lost — the clock is wall-time based and keeps counting no matter what.',
+      'A banner shows exactly how much was bridged, and the saved run notes it too, so you always know which miles were GPS-exact.',
+      'Bridging is speed-checked per sport, so a GPS glitch can never teleport you a free mile.'
+    ]
+  },
+  {
     v: 8,
     date: '2026-07-23',
     title: 'Rides, walks & workout intensity',
