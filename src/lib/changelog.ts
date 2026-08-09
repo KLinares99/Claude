@@ -13,6 +13,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: 11,
+    date: '2026-08-09',
+    title: 'Log past workouts',
+    points: [
+      'Train → History → "Log past": add a workout you did without the app — date, duration, intensity, and optionally the exercises with sets × reps @ weight. It counts in your history, feed and friend sync like any live session.',
+      'A little more shine: the active tab gets a soft pill, feed cards settle in gently, and the weekly card wears a subtle green wash.'
+    ]
+  },
+  {
     v: 10,
     date: '2026-08-09',
     title: 'A cleaner Home',

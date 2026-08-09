@@ -10,8 +10,8 @@ import {
 } from '../data/exercises';
 import {
   liftSubscribe, liftGet, liftStart, liftAddPlanned, liftLogSet, liftRemoveSet, liftFinish, liftDiscard,
-  saveTemplate, deleteTemplate, deleteLog, logVolume, totalSets, INTENSITIES, intensityOf,
-  type TemplateExercise, type WorkoutLog, type Intensity
+  saveTemplate, deleteTemplate, deleteLog, addManualLog, logVolume, totalSets, INTENSITIES, intensityOf,
+  type TemplateExercise, type WorkoutLog, type Intensity, type LoggedExercise
 } from '../lib/training';
 import { deleteRemoteWorkout } from '../lib/sync';
 import { fmtClock, fmtRelDate } from '../lib/run';
@@ -28,6 +28,7 @@ export default function Train() {
   const session = useSyncExternalStore(liftSubscribe, liftGet);
   const { data } = useStore();
   const [building, setBuilding] = useState<{ id?: string; name: string; exercises: TemplateExercise[] } | null>(null);
+  const [loggingPast, setLoggingPast] = useState(false);
   const [detail, setDetail] = useState<Exercise | null>(null);
 
   if (session.active) {
@@ -127,7 +128,14 @@ export default function Train() {
       </div>
 
       {/* history */}
-      <WorkoutHistory logs={data.training.logs} />
+      <WorkoutHistory logs={data.training.logs} onLogPast={() => setLoggingPast(true)} />
+
+      {loggingPast && (
+        <ManualWorkoutSheet
+          onClose={() => setLoggingPast(false)}
+          onShowDetail={setDetail}
+        />
+      )}
 
       {building && (
         <BuilderSheet
@@ -810,14 +818,23 @@ function FinishSheet({
 
 // ---- history -----------------------------------------------------------------
 
-function WorkoutHistory({ logs }: { logs: WorkoutLog[] }) {
+function WorkoutHistory({ logs, onLogPast }: { logs: WorkoutLog[]; onLogPast: () => void }) {
   const recent = useMemo(() => [...logs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20), [logs]);
-  if (recent.length === 0) return null;
   return (
     <div className="card-pad">
-      <h2 className="font-black text-base flex items-center gap-2 mb-2">
-        <History size={16} className="text-brand" /> History
-      </h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="font-black text-base flex items-center gap-2">
+          <History size={16} className="text-brand" /> History
+        </h2>
+        <button className="chip bg-card border border-line text-ink" onClick={onLogPast}>
+          <Plus size={14} /> Log past
+        </button>
+      </div>
+      {recent.length === 0 && (
+        <p className="text-sm text-dim">
+          Nothing logged yet. Finish a live session, or log a workout you did without the app.
+        </p>
+      )}
       <div className="divide-y divide-line">
         {recent.map((l) => (
           <div key={l.id} className="py-2.5 flex items-center gap-2">
@@ -848,6 +865,172 @@ function WorkoutHistory({ logs }: { logs: WorkoutLog[] }) {
             </button>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ---- manual workout entry ----------------------------------------------------
+
+/** Log a past workout done without the app — lands in history and the feed
+ *  (and syncs to friends) just like a live session. */
+function ManualWorkoutSheet({
+  onClose, onShowDetail
+}: { onClose: () => void; onShowDetail: (e: Exercise) => void }) {
+  const [name, setName] = useState('Workout');
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [minutes, setMinutes] = useState('');
+  const [intensity, setIntensity] = useState<Intensity | null>('moderate');
+  const [rows, setRows] = useState<Array<{ exId: string; name: string; sets: string; reps: string; weight: string }>>([]);
+  const [picking, setPicking] = useState(false);
+
+  const save = () => {
+    const mins = parseInt(minutes || '0', 10);
+    if (!mins || mins <= 0) { toast('How long was the workout?'); return; }
+    const exercises: LoggedExercise[] = rows
+      .map((r) => {
+        const n = Math.max(1, parseInt(r.sets || '1', 10));
+        const reps = parseInt(r.reps || '0', 10);
+        const weight = parseFloat(r.weight || '0');
+        if (!reps || reps <= 0) return null;
+        return {
+          exId: r.exId,
+          name: r.name,
+          sets: Array.from({ length: n }, () => ({ reps, weight: isFinite(weight) && weight > 0 ? weight : 0 }))
+        };
+      })
+      .filter((e): e is LoggedExercise => e !== null);
+    const saved = addManualLog({
+      date: `${date}T12:00:00`,
+      name: name.trim() || 'Workout',
+      seconds: mins * 60,
+      intensity: intensity ?? undefined,
+      exercises
+    });
+    onClose();
+    toast(`${saved.name} logged — ${fmtClock(saved.seconds)}${exercises.length ? `, ${totalSets(saved)} sets` : ''}`);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div
+        className="bg-card rounded-t-3xl sm:rounded-3xl w-full max-w-[480px] p-5 space-y-3 shadow-sheet max-h-[92vh] overflow-y-auto"
+        style={{ paddingBottom: 'calc(20px + env(safe-area-inset-bottom))' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="w-10 h-1 rounded-full bg-line mx-auto sm:hidden" />
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-black">Log a past workout</h2>
+          <button onClick={onClose} className="p-1 -mr-1 text-dim hover:text-ink" aria-label="Close manual workout">
+            <X size={22} />
+          </button>
+        </div>
+
+        <input
+          className="input w-full font-semibold"
+          placeholder="Workout name — e.g. Push day"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="label block mb-1">Date</span>
+            <input className="input w-full" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </label>
+          <label className="block">
+            <span className="label block mb-1">Duration (min)</span>
+            <input className="input w-full text-center" inputMode="numeric" placeholder="45" value={minutes} onChange={(e) => setMinutes(e.target.value)} />
+          </label>
+        </div>
+
+        <div>
+          <div className="label mb-1.5">Intensity</div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {INTENSITIES.map((i) => {
+              const on = intensity === i.id;
+              return (
+                <button
+                  key={i.id}
+                  onClick={() => setIntensity(on ? null : i.id)}
+                  className={`rounded-xl py-2 text-center border transition-colors ${
+                    on ? 'border-brand bg-brand-soft text-brand' : 'border-line text-dim hover:text-ink'
+                  }`}
+                >
+                  <span className="block text-xs font-black">{i.label}</span>
+                  <span className="block text-[9px] font-bold opacity-70">{i.rpe}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <div className="label mb-1">Exercises (optional)</div>
+          {rows.length > 0 && (
+            <div className="divide-y divide-line mb-1">
+              {rows.map((r, i) => (
+                <div key={r.exId} className="py-2 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="flex-1 min-w-0 text-left text-sm font-semibold truncate"
+                      onClick={() => { const e = exerciseById(r.exId); if (e) onShowDetail(e); }}
+                    >
+                      {r.name}
+                    </button>
+                    <button
+                      className="text-faint hover:text-bad p-1.5 -m-1"
+                      aria-label={`Remove ${r.name}`}
+                      onClick={() => setRows(rows.filter((_, j) => j !== i))}
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      className="input flex-1 min-w-0 text-center !py-1.5 text-sm"
+                      inputMode="numeric" placeholder="Sets"
+                      aria-label={`Sets for ${r.name}`}
+                      value={r.sets}
+                      onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, sets: e.target.value } : x)))}
+                    />
+                    <span className="text-faint text-xs font-bold">×</span>
+                    <input
+                      className="input flex-1 min-w-0 text-center !py-1.5 text-sm"
+                      inputMode="numeric" placeholder="Reps"
+                      aria-label={`Reps for ${r.name}`}
+                      value={r.reps}
+                      onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))}
+                    />
+                    <span className="text-faint text-xs font-bold">@</span>
+                    <input
+                      className="input flex-1 min-w-0 text-center !py-1.5 text-sm"
+                      inputMode="decimal" placeholder="lb"
+                      aria-label={`Weight for ${r.name}`}
+                      value={r.weight}
+                      onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, weight: e.target.value } : x)))}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {picking ? (
+            <ExercisePicker
+              onPick={(e) => {
+                if (rows.some((r) => r.exId === e.id)) { toast('Already added'); return; }
+                setRows([...rows, { exId: e.id, name: e.name, sets: `${parseInt(e.sets, 10) || 3}`, reps: '', weight: '' }]);
+                setPicking(false);
+              }}
+              onDone={() => setPicking(false)}
+            />
+          ) : (
+            <button className="btn-ghost w-full !py-2 text-sm" onClick={() => setPicking(true)}>
+              <Plus size={15} /> Add exercise
+            </button>
+          )}
+        </div>
+
+        <button className="btn-primary w-full py-3" onClick={save}>Save to history</button>
       </div>
     </div>
   );

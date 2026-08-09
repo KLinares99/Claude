@@ -63,7 +63,7 @@ export default function Home() {
       <WhatsNew />
 
       {/* weekly snapshot */}
-      <div className="card-pad">
+      <div className="card-pad card-hero">
         <div className="flex items-center justify-between">
           <h2 className="font-black text-base">This week</h2>
           {streak > 0 && (
@@ -248,7 +248,7 @@ function ActivityCard({
   onOpen: () => void;
 }) {
   return (
-    <button className="card w-full text-left overflow-hidden" onClick={onOpen}>
+    <button className="card card-in w-full text-left overflow-hidden" onClick={onOpen}>
       <div className="p-4 pb-3">
         <div className="flex items-center gap-2.5">
           {photo ? (
@@ -336,7 +336,7 @@ function WorkoutCard({
 }) {
   const names = w.exercises.map((e) => e.name);
   return (
-    <div className="card w-full text-left overflow-hidden">
+    <div className="card card-in w-full text-left overflow-hidden">
       <div className="p-4 pb-3">
         <div className="flex items-center gap-2.5">
           {photo ? (

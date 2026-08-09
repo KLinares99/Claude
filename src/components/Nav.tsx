@@ -59,7 +59,7 @@ function NavButton({
       onClick={onClick}
       className={`flex flex-col items-center gap-1 py-2.5 transition-colors ${on ? 'text-brand' : 'text-dim hover:text-ink'}`}
     >
-      {children}
+      <span className={`px-3.5 py-0.5 rounded-full transition-colors ${on ? 'bg-brand-soft' : ''}`}>{children}</span>
       <span className="text-[10px] font-semibold tracking-wide">{label}</span>
     </button>
   );

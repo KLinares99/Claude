@@ -101,6 +101,17 @@ export function deleteTemplate(id: string) {
   });
 }
 
+/** Log a workout done without the app (manual entry) straight into history. */
+export function addManualLog(log: Omit<WorkoutLog, 'id'>): WorkoutLog {
+  const full: WorkoutLog = { ...log, id: uid() };
+  mutateStore((d) => {
+    d.training.logs.push(full);
+    d.training.logs.sort((a, b) => a.date.localeCompare(b.date));
+    return d;
+  });
+  return full;
+}
+
 export function deleteLog(id: string) {
   mutateStore((d) => {
     d.training.logs = d.training.logs.filter((l) => l.id !== id);

@@ -57,6 +57,21 @@
   }
 }
 
+/* soft entrance for feed cards — one quick settle, no parade */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.card-in { animation: card-in 0.28s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .card-in { animation: none; }
+}
+
+/* hero wash — a faint brand tint fading out of the top of a card */
+.card-hero {
+  background-image: linear-gradient(180deg, rgb(var(--brand-soft) / 0.65), rgb(var(--brand-soft) / 0) 58%);
+}
+
 /* hide scrollbars on horizontal scroller rows */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
