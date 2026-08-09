@@ -13,6 +13,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: 10,
+    date: '2026-08-09',
+    title: 'A cleaner Home',
+    points: [
+      'Home is now your feed: This week up top, then straight into everyone\'s activities — no more scrolling past four dashboards.',
+      'Race times moved to the You tab as one card: pick a distance, see your best and the trend with your PR marked.',
+      'Nutrition on You is now a compact row — tap it to open the full diary.',
+      'Fixed: the "+ Set" button no longer falls off-screen mid-workout, "Marathon" finally fits everywhere, and editing a saved workout no longer duplicates it (deleting now lives inside the editor, away from Start).'
+    ]
+  },
+  {
     v: 9,
     date: '2026-07-24',
     title: 'No more lost distance',

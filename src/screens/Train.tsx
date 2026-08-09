@@ -27,7 +27,7 @@ import Mascot from '../components/Mascot';
 export default function Train() {
   const session = useSyncExternalStore(liftSubscribe, liftGet);
   const { data } = useStore();
-  const [building, setBuilding] = useState<{ name: string; exercises: TemplateExercise[] } | null>(null);
+  const [building, setBuilding] = useState<{ id?: string; name: string; exercises: TemplateExercise[] } | null>(null);
   const [detail, setDetail] = useState<Exercise | null>(null);
 
   if (session.active) {
@@ -68,16 +68,9 @@ export default function Train() {
                   </div>
                 </div>
                 <button
-                  className="text-faint hover:text-bad p-1"
-                  aria-label={`Delete ${t.name}`}
-                  onClick={() => { if (confirm(`Delete "${t.name}"?`)) deleteTemplate(t.id); }}
-                >
-                  <Trash2 size={15} />
-                </button>
-                <button
                   className="text-dim hover:text-ink p-1"
                   aria-label={`Edit ${t.name}`}
-                  onClick={() => setBuilding({ name: t.name, exercises: [...t.exercises] })}
+                  onClick={() => setBuilding({ id: t.id, name: t.name, exercises: [...t.exercises] })}
                 >
                   <ChevronRight size={16} />
                 </button>
@@ -380,7 +373,7 @@ function TempoTimer({ ex, onClose }: { ex: Exercise; onClose: () => void }) {
 function BuilderSheet({
   initial, onClose, onShowDetail
 }: {
-  initial: { name: string; exercises: TemplateExercise[] };
+  initial: { id?: string; name: string; exercises: TemplateExercise[] };
   onClose: () => void;
   onShowDetail: (e: Exercise) => void;
 }) {
@@ -395,7 +388,7 @@ function BuilderSheet({
 
   const start = () => {
     const nm = name.trim() || 'Workout';
-    if (list.length > 0) saveTemplate({ name: nm, exercises: list });
+    if (list.length > 0) saveTemplate({ id: initial.id, name: nm, exercises: list });
     liftStart(nm, list);
     onClose();
     toast(`${nm} started — go lift!`);
@@ -470,7 +463,7 @@ function BuilderSheet({
             className="btn-ghost flex-1"
             disabled={list.length === 0}
             onClick={() => {
-              saveTemplate({ name: name.trim() || 'Workout', exercises: list });
+              saveTemplate({ id: initial.id, name: name.trim() || 'Workout', exercises: list });
               onClose();
               toast('Workout saved to My workouts');
             }}
@@ -481,6 +474,20 @@ function BuilderSheet({
             <Play size={16} fill="currentColor" /> Start now
           </button>
         </div>
+        {initial.id && (
+          <button
+            className="btn-danger w-full"
+            onClick={() => {
+              if (confirm(`Delete "${name.trim() || 'Workout'}" from My workouts?`)) {
+                deleteTemplate(initial.id as string);
+                onClose();
+                toast('Workout deleted');
+              }
+            }}
+          >
+            <Trash2 size={16} /> Delete workout
+          </button>
+        )}
       </div>
     </div>
   );
@@ -707,7 +714,7 @@ function ExerciseLogCard({
           {logged.map((st, i) => (
             <span key={i} className="chip bg-brand-soft text-brand nums">
               {st.reps} × {st.weight > 0 ? `${st.weight} lb` : 'BW'}
-              <button className="ml-0.5 -mr-0.5" aria-label={`Remove set ${i + 1} of ${name}`} onClick={() => onRemoveSet(i)}>
+              <button className="p-2 -m-1.5" aria-label={`Remove set ${i + 1} of ${name}`} onClick={() => onRemoveSet(i)}>
                 <X size={11} />
               </button>
             </span>
@@ -716,8 +723,10 @@ function ExerciseLogCard({
       )}
 
       <div className="flex items-center gap-2 mt-2.5">
+        {/* min-w-0 lets the inputs shrink below their browser default width,
+            so the Set button never overflows the card on narrow phones */}
         <input
-          className="input flex-1 text-center"
+          className="input flex-1 min-w-0 text-center"
           inputMode="numeric"
           placeholder={last ? `${last.reps} reps` : 'Reps'}
           aria-label={`Reps for ${name}`}
@@ -725,14 +734,14 @@ function ExerciseLogCard({
           onChange={(e) => setReps(e.target.value)}
         />
         <input
-          className="input flex-1 text-center"
+          className="input flex-1 min-w-0 text-center"
           inputMode="decimal"
           placeholder={last ? `${last.weight} lb` : 'Weight (lb)'}
           aria-label={`Weight for ${name}`}
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
         />
-        <button className="btn-primary !px-4" onClick={log} aria-label={`Log set for ${name}`}>
+        <button className="btn-primary !px-3 shrink-0" onClick={log} aria-label={`Log set for ${name}`}>
           <Plus size={16} /> Set
         </button>
       </div>

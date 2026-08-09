@@ -55,7 +55,7 @@ export default function App() {
         </div>
         {tab === 'train' && <Train />}
         {tab === 'nutrition' && <Nutrition />}
-        {tab === 'you' && <Profile />}
+        {tab === 'you' && <Profile onOpenNutrition={() => setTab('nutrition')} />}
       </main>
 
       {/* live lift-session banner when working out on another tab */}

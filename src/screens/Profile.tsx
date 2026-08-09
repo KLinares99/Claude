@@ -8,10 +8,11 @@ import { fmtClock, fmtTime, paceFor } from '../lib/run';
 import { ACCENTS, accentHex } from '../lib/theme';
 import { getUsdaKey, setUsdaKey } from '../lib/foodSearch';
 import { toast } from '../lib/toast';
+import { RaceTimesCard, NutritionSummaryCard } from '../components/StatsCards';
 import CoupleSync from './CoupleSync';
 import Friends from './Friends';
 
-export default function Profile() {
+export default function Profile({ onOpenNutrition }: { onOpenNutrition?: () => void }) {
   const { data, update } = useStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
@@ -192,11 +193,22 @@ export default function Profile() {
       <div className="card-pad">
         <h2 className="font-black mb-3">All time</h2>
         <div className="grid grid-cols-3 gap-2">
-          <Total label="Runs" value={`${best.count}`} />
+          <Total label="Activities" value={`${best.count}`} />
           <Total label="Distance" value={best.totalMiles.toFixed(1)} unit="mi" />
           <Total label="Time" value={fmtClock(best.totalSeconds)} />
         </div>
       </div>
+
+      {/* race PRs + trend (moved from Home in the UI-audit restructure) */}
+      <RaceTimesCard activities={data.activities} accent={accent} />
+
+      {/* compact nutrition summary — taps through to the Nutrition tab */}
+      <NutritionSummaryCard
+        entries={data.nutrition.entries}
+        profile={data.nutrition.profile}
+        weightLbs={data.settings.weightLbs}
+        onOpen={() => onOpenNutrition?.()}
+      />
 
       {/* weekly mileage chart */}
       <div className="card-pad">
@@ -220,6 +232,7 @@ export default function Profile() {
       <div className="card-pad">
         <h2 className="font-black mb-3 flex items-center gap-2">
           <Trophy size={16} className="text-brand" /> Best efforts
+          <span className="text-[10px] font-bold text-faint uppercase tracking-wide ml-auto">runs only</span>
         </h2>
         <div className="divide-y divide-line">
           <Effort

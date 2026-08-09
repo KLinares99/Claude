@@ -3,14 +3,18 @@ import { X } from 'lucide-react';
 import Logo from './Logo';
 import Mascot from './Mascot';
 import { quoteForToday } from '../data/quotes';
+import { unseenChanges } from '../lib/changelog';
 import { localDateISO } from '../lib/nutrition';
 
 const SHOWN_KEY = 'runner:quoteShown';
 
-/** Quote / tip of the day — shows once per calendar day as the app opens. */
+/** Quote / tip of the day — shows once per calendar day as the app opens.
+ *  Skipped when a What's-new banner is waiting, so an update never opens
+ *  with two "read me first" moments stacked; the quote returns tomorrow. */
 export default function QuoteOfDay() {
   const [open, setOpen] = useState(() => {
     try {
+      if (unseenChanges().length > 0) return false;
       return localStorage.getItem(SHOWN_KEY) !== localDateISO();
     } catch {
       return false;

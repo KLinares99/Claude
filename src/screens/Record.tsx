@@ -97,7 +97,7 @@ export default function Record({ active }: { active: boolean }) {
               mode === m ? 'bg-ink text-white' : 'text-dim hover:text-ink'
             }`}
           >
-            {m === 'run' ? 'Run' : 'Intervals'}
+            {m === 'run' ? 'Track' : 'Intervals'}
           </button>
         ))}
       </div>
@@ -281,7 +281,8 @@ function GoalCard({ elapsed, miles, goalMiles }: { elapsed: number; miles: numbe
           </button>
         )}
       </div>
-      <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+      <div className="relative">
+      <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pr-8">
         {RACE_DISTANCES.map((d) => {
           const on = goal != null && Math.abs(goal - d.miles) < 0.01;
           return (
@@ -296,6 +297,8 @@ function GoalCard({ elapsed, miles, goalMiles }: { elapsed: number; miles: numbe
             </button>
           );
         })}
+      </div>
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-r from-transparent to-card" />
       </div>
 
       {goal != null && (

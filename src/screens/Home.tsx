@@ -1,15 +1,12 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import { Flame, Plus, ChevronRight, Heart, Trophy, Utensils, Lock, TrendingUp, Dumbbell } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { Flame, Plus, ChevronRight, Heart, Dumbbell } from 'lucide-react';
 import {
-  useStore, weekStats, weekByDay, computeStreak, raceBests, raceTrend, weekCalories, uid,
+  useStore, weekStats, weekByDay, computeStreak, uid,
   type Activity
 } from '../lib/storage';
 import { syncSubscribe, syncGet, toggleKudos } from '../lib/sync';
 import { logVolume, totalSets, intensityOf, type WorkoutLog } from '../lib/training';
-import { accentHex } from '../lib/theme';
-import { fmtClock, fmtRelDate, defaultRunName, RACE_DISTANCES, SPORTS, sportOf, effortStat, type Sport } from '../lib/run';
-import { dayTotals, calorieTarget, localDateISO } from '../lib/nutrition';
+import { fmtClock, fmtRelDate, defaultRunName, SPORTS, sportOf, effortStat, type Sport } from '../lib/run';
 import RoutePreview from '../components/ui/RoutePreview';
 import Mascot from '../components/Mascot';
 import WhatsNew from '../components/WhatsNew';
@@ -127,19 +124,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* race-distance best efforts */}
-      <RaceDistancesCard activities={data.activities} />
-
-      {/* time-over-time progress graph per race distance */}
-      <RaceTrendCard activities={data.activities} accent={accentHex(data.settings.accent)} />
-
-      {/* calorie intake summary */}
-      <CalorieCard
-        entries={data.nutrition.entries}
-        profile={data.nutrition.profile}
-        weightLbs={data.settings.weightLbs}
-      />
-
       {/* feed */}
       <div className="flex items-center justify-between px-1">
         <h2 className="font-black text-base">Activities</h2>
@@ -250,246 +234,6 @@ function WeekStat({ label, value, unit }: { label: string; value: string; unit?:
   );
 }
 
-/** Best time per standard race distance — a Strava-style PR "graph". Bars are
- *  scaled by pace so your strongest distance reads fullest; unrun distances
- *  show locked. */
-function RaceDistancesCard({ activities }: { activities: Activity[] }) {
-  const bests = useMemo(() => raceBests(activities), [activities]);
-  const unlocked = bests.filter((b) => b.seconds != null);
-  // scale bars by pace (sec/mi): fastest distance = full bar
-  const paces = unlocked.map((b) => (b.seconds as number) / b.miles);
-  const fastest = paces.length ? Math.min(...paces) : 1;
-  const slowest = paces.length ? Math.max(...paces) : 1;
-
-  return (
-    <div className="card-pad">
-      <div className="flex items-center gap-2 mb-3">
-        <Trophy size={16} className="text-brand" />
-        <h2 className="font-black text-base">Race distances</h2>
-      </div>
-      {unlocked.length === 0 ? (
-        <p className="text-sm text-dim">Log a run and your best 5K, 10K and beyond will show up here.</p>
-      ) : (
-        <div className="space-y-2.5">
-          {bests.map((b) => {
-            const has = b.seconds != null;
-            const pace = has ? (b.seconds as number) / b.miles : 0;
-            // faster pace → fuller bar; single distance → full bar
-            const pct = has
-              ? slowest === fastest
-                ? 1
-                : 0.35 + 0.65 * ((slowest - pace) / (slowest - fastest))
-              : 0;
-            return (
-              <div key={b.label} className="flex items-center gap-3">
-                <span className="w-12 text-sm font-black shrink-0">{b.label}</span>
-                <div className="flex-1 h-6 rounded-lg bg-paper overflow-hidden">
-                  {has && (
-                    <div
-                      className="h-full bg-brand/85 rounded-lg transition-all"
-                      style={{ width: `${Math.max(10, pct * 100)}%` }}
-                    />
-                  )}
-                </div>
-                {has ? (
-                  <span className="w-24 text-right shrink-0">
-                    <span className="text-sm font-black nums">{fmtClock(b.seconds as number)}</span>
-                    <span className="block text-[10px] text-dim nums">
-                      {fmtClock(pace)}/mi{b.exact ? '' : ' est'}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="w-24 text-right shrink-0 text-faint flex items-center justify-end gap-1">
-                    <Lock size={11} /> <span className="text-[11px] font-bold">Locked</span>
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Pick a race distance and see your projected time for every qualifying run
- *  over time — a downward line means you're getting faster. */
-function RaceTrendCard({ activities, accent }: { activities: Activity[]; accent: string }) {
-  const available = useMemo(
-    () => RACE_DISTANCES.filter((d) => raceTrend(activities, d.miles).length >= 1),
-    [activities]
-  );
-  const [sel, setSel] = useState<string | null>(null);
-  const active = available.find((d) => d.label === sel) ?? available[0];
-  const points = useMemo(
-    () =>
-      active
-        ? raceTrend(activities, active.miles).map((p) => ({
-            label: new Date(p.date).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }),
-            seconds: p.seconds,
-            name: p.name,
-            exact: p.exact
-          }))
-        : [],
-    [activities, active]
-  );
-  const best = points.length ? Math.min(...points.map((p) => p.seconds)) : 0;
-
-  if (available.length === 0) return null;
-
-  return (
-    <div className="card-pad">
-      <div className="flex items-center gap-2 mb-3">
-        <TrendingUp size={16} className="text-brand" />
-        <h2 className="font-black text-base">Progress</h2>
-      </div>
-      <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 mb-3">
-        {available.map((d) => {
-          const on = d.label === (active?.label ?? '');
-          return (
-            <button
-              key={d.label}
-              onClick={() => setSel(d.label)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold border transition-colors ${
-                on ? 'border-brand bg-brand text-white' : 'border-line text-dim hover:text-ink'
-              }`}
-            >
-              {d.label}
-            </button>
-          );
-        })}
-      </div>
-      {points.length < 2 ? (
-        <p className="text-xs text-dim">
-          One {active?.label} on the books ({fmtClock(points[0]?.seconds ?? 0)}). Log another run
-          that far and the trend line appears.
-        </p>
-      ) : (
-        <>
-          <ResponsiveContainer width="100%" height={170}>
-            <LineChart data={points} margin={{ left: 4, right: 10, top: 8, bottom: 0 }}>
-              <XAxis dataKey="label" tick={{ fill: '#9CA3AF', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis
-                width={44}
-                tick={{ fill: '#9CA3AF', fontSize: 10 }}
-                axisLine={false}
-                tickLine={false}
-                domain={['dataMin - 60', 'dataMax + 60']}
-                tickFormatter={(v: number) => fmtClock(v)}
-              />
-              <Tooltip
-                contentStyle={{ background: '#fff', border: '1px solid #E7E5E0', borderRadius: 10, fontSize: 12 }}
-                formatter={(v: number) => [fmtClock(v), active?.label]}
-                labelFormatter={(l, payload) => {
-                  const p = payload?.[0]?.payload as { name?: string; exact?: boolean } | undefined;
-                  return `${p?.name ?? l}${p?.exact ? '' : ' (est from longer run)'}`;
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="seconds"
-                stroke={accent}
-                strokeWidth={2.5}
-                dot={{ r: 3.5, fill: accent, strokeWidth: 0 }}
-                activeDot={{ r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-          <p className="text-[11px] text-dim mt-1">
-            Best {active?.label}: <span className="font-bold text-ink nums">{fmtClock(best)}</span> · lower is faster
-          </p>
-        </>
-      )}
-    </div>
-  );
-}
-
-/** Today's calorie intake vs target + a 7-day intake strip. */
-function CalorieCard({
-  entries, profile, weightLbs
-}: {
-  entries: import('../lib/nutrition').FoodEntry[];
-  profile: import('../lib/nutrition').NutritionProfile | null;
-  weightLbs: number;
-}) {
-  const today = localDateISO();
-  const eaten = useMemo(() => dayTotals(entries, today).calories, [entries, today]);
-  const target = profile ? calorieTarget(profile, weightLbs) : null;
-  const week = useMemo(() => weekCalories(entries), [entries]);
-  const maxCal = Math.max(...week.map((d) => d.calories), target ?? 1, 1);
-  const logged = week.some((d) => d.calories > 0);
-
-  return (
-    <div className="card-pad">
-      <div className="flex items-center gap-2 mb-3">
-        <Utensils size={16} className="text-brand" />
-        <h2 className="font-black text-base">Nutrition today</h2>
-      </div>
-
-      {!logged && eaten === 0 ? (
-        <p className="text-sm text-dim">Log meals in the Nutrition tab to see your calories here.</p>
-      ) : (
-        <>
-          <div className="grid grid-cols-3 gap-2">
-            <WeekStat label="Eaten" value={`${eaten}`} unit="kcal" />
-            {target != null ? (
-              <>
-                <WeekStat label="Target" value={`${target}`} unit="kcal" />
-                <WeekStat
-                  label={eaten > target ? 'Over' : 'Left'}
-                  value={`${Math.abs(target - eaten)}`}
-                  unit="kcal"
-                />
-              </>
-            ) : (
-              <div className="col-span-2 flex items-center">
-                <span className="text-[11px] text-dim">Set your goals in Nutrition for a daily target.</span>
-              </div>
-            )}
-          </div>
-
-          {target != null && (
-            <div className="mt-3">
-              <div className="h-2 rounded-full bg-paper overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${eaten > target ? 'bg-bad' : 'bg-brand'}`}
-                  style={{ width: `${Math.min(1, target > 0 ? eaten / target : 0) * 100}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* 7-day intake strip */}
-          <div className="grid grid-cols-7 gap-1.5 mt-4">
-            {week.map((d, i) => (
-              <div key={i} className="flex flex-col items-center gap-1">
-                <div className="w-full h-14 rounded-lg bg-paper flex items-end overflow-hidden">
-                  {d.calories > 0 && (
-                    <div
-                      className={`w-full rounded-lg transition-all ${
-                        target != null && d.calories > target ? 'bg-bad/70' : 'bg-brand/70'
-                      }`}
-                      style={{ height: `${Math.max(12, (d.calories / maxCal) * 100)}%` }}
-                      title={`${d.calories} kcal`}
-                    />
-                  )}
-                </div>
-                <span
-                  className={`w-6 h-6 flex items-center justify-center rounded-full text-[11px] font-bold ${
-                    d.isToday ? 'bg-ink text-white' : d.isFuture ? 'text-faint' : 'text-dim'
-                  }`}
-                >
-                  {d.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 function ActivityCard({
   a, who, photo, isPartner, hearts, iHearted, canHeart, onHeart, onOpen
 }: {
@@ -541,7 +285,7 @@ function ActivityCard({
       </div>
       {a.route.length > 1 && (
         <div className="px-4 pb-3">
-          <RoutePreview route={a.route} />
+          <RoutePreview route={a.route} height={120} />
         </div>
       )}
       <KudosRow hearts={hearts} iHearted={iHearted} canHeart={canHeart} onHeart={onHeart} />
