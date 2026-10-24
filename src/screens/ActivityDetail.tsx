@@ -4,10 +4,11 @@ import 'leaflet/dist/leaflet.css';
 import { X, Trash2, Pencil, Check, Share2, Play, Square, Layers } from 'lucide-react';
 import { useStore, type Activity } from '../lib/storage';
 import { deleteRemoteActivity } from '../lib/sync';
-import { fmtClock, fmtRelDate, caloriesFor, haversineMeters, effortStat, sportOf, type LatLng } from '../lib/run';
+import { fmtClock, fmtRelDate, caloriesFor, haversineMeters, effortStat, type LatLng } from '../lib/run';
 import { accentHex } from '../lib/theme';
 import { toast } from '../lib/toast';
 import ShareCard from './ShareCard';
+import SportIcon from '../components/ui/SportIcon';
 
 /** Street (OpenStreetMap) or satellite (Esri World Imagery) base layer. */
 function makeTileLayer(satellite: boolean): L.TileLayer {
@@ -181,7 +182,7 @@ export default function ActivityDetail({
           <button onClick={onClose} className="p-1 -ml-1 text-dim hover:text-ink" aria-label="Close">
             <X size={24} />
           </button>
-          <span className="text-sm font-bold">{sportOf(activity.sport).emoji} {fmtRelDate(activity.date)}</span>
+          <span className="text-[17px] font-semibold flex items-center gap-1.5"><SportIcon sport={activity.sport ?? 'run'} size={16} /> {fmtRelDate(activity.date)}</span>
           <div className="flex items-center gap-1">
             <button onClick={() => setSharing(true)} className="p-1 text-dim hover:text-brand" aria-label="Share">
               <Share2 size={20} />
@@ -201,7 +202,7 @@ export default function ActivityDetail({
           {editing ? (
             <>
               <input
-                className="input flex-1 text-lg font-black"
+                className="input flex-1 text-lg font-bold"
                 value={name}
                 autoFocus
                 onChange={(e) => setName(e.target.value)}
@@ -211,7 +212,7 @@ export default function ActivityDetail({
             </>
           ) : (
             <>
-              <h1 className="text-2xl font-black flex-1">{activity.name}</h1>
+              <h1 className="text-2xl font-bold flex-1">{activity.name}</h1>
               {!readOnly && (
                 <button className="text-dim hover:text-ink p-1" onClick={() => setEditing(true)} aria-label="Rename">
                   <Pencil size={18} />
@@ -228,7 +229,7 @@ export default function ActivityDetail({
             <div ref={mapDiv} className="w-full h-64" />
             <button
               onClick={toggleSatellite}
-              className={`absolute top-3 left-3 z-[500] inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-xs font-black shadow-lg backdrop-blur active:scale-95 transition-transform ${
+              className={`absolute top-3 left-3 z-[500] inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-xs font-bold shadow-lg backdrop-blur active:scale-95 transition-transform ${
                 satellite ? 'bg-brand text-white' : 'bg-white/90 text-ink'
               }`}
               aria-label={satellite ? 'Switch to street map' : 'Switch to satellite'}
@@ -238,7 +239,7 @@ export default function ActivityDetail({
             </button>
             <button
               onClick={flying ? endFlyover : startFlyover}
-              className="absolute bottom-3 right-3 z-[500] inline-flex items-center gap-1.5 rounded-full bg-ink/90 text-white pl-3 pr-4 py-2 text-xs font-black shadow-lg backdrop-blur active:scale-95 transition-transform"
+              className="absolute bottom-3 right-3 z-[500] inline-flex items-center gap-1.5 rounded-full bg-ink/90 text-white pl-3 pr-4 py-2 text-xs font-bold shadow-lg backdrop-blur active:scale-95 transition-transform"
               aria-label={flying ? 'Stop flyover' : 'Play flyover'}
             >
               {flying ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
@@ -262,7 +263,7 @@ export default function ActivityDetail({
         {/* splits */}
         {activity.splits.length > 0 && (
           <div className="card-pad">
-            <h2 className="font-black mb-3">Splits</h2>
+            <h2 className="font-bold mb-3">Splits</h2>
             <div className="space-y-2">
               {activity.splits.map((s, i) => {
                 const pace = s.seconds / Math.max(0.05, s.miles);

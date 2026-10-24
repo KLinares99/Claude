@@ -10,11 +10,11 @@
     --brand-soft: 220 252 231;
   }
   html {
-    background: #f7f6f3;
+    background: #f2f2f7;
   }
   body {
-    @apply text-ink bg-paper;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    @apply text-ink bg-paper antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
   /* tabular numbers everywhere stats/timers live */
@@ -25,32 +25,38 @@
 }
 
 @layer components {
+  /* Inset-grouped surface (Apple HIG): flat white on grouped gray, no border */
   .card {
-    @apply bg-card border border-line rounded-2xl shadow-card;
+    @apply bg-card rounded-2xl;
   }
   .card-pad {
     @apply card p-4;
   }
   .stat-num {
-    @apply font-black nums tracking-tight text-ink;
+    @apply font-semibold nums tracking-tight text-ink;
   }
+  /* sentence-case caption above a value (iOS no longer forces uppercase) */
   .label {
-    @apply text-[11px] font-semibold uppercase tracking-wider text-faint;
+    @apply text-[13px] font-normal text-dim;
+  }
+  /* iOS large title */
+  .large-title {
+    @apply text-[34px] leading-[41px] font-bold tracking-tight text-ink;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed select-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-opacity active:opacity-60 disabled:opacity-40 disabled:cursor-not-allowed select-none;
   }
   .btn-primary {
-    @apply btn bg-brand text-white hover:bg-brand-dark px-4 py-2.5 active:scale-[0.99];
+    @apply btn bg-brand text-white px-4 py-3;
   }
   .btn-ghost {
-    @apply btn bg-card text-ink border border-line hover:bg-paper px-4 py-2.5;
+    @apply btn bg-fill text-brand px-4 py-3;
   }
   .btn-danger {
-    @apply btn bg-card text-bad border border-line hover:bg-red-50 px-4 py-2.5;
+    @apply btn bg-fill text-bad px-4 py-3;
   }
   .input {
-    @apply bg-card border border-line rounded-xl px-3 py-2 text-ink nums placeholder:text-faint focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/15;
+    @apply bg-fill rounded-xl px-3 py-2.5 text-ink nums placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-brand/40;
   }
   .chip {
     @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
@@ -67,11 +73,6 @@
   .card-in { animation: none; }
 }
 
-/* hero wash — a faint brand tint fading out of the top of a card */
-.card-hero {
-  background-image: linear-gradient(180deg, rgb(var(--brand-soft) / 0.65), rgb(var(--brand-soft) / 0) 58%);
-}
-
 /* hide scrollbars on horizontal scroller rows */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -79,7 +80,7 @@
 /* leaflet chrome tweaks — softer, matches the card radius */
 .leaflet-container {
   font-family: inherit;
-  background: #e9e7e2;
+  background: #e5e5ea;
 }
 .leaflet-control-attribution {
   font-size: 9px !important;
@@ -96,7 +97,7 @@
   animation: rec-pulse 1.4s ease-in-out infinite;
 }
 
-/* kudos celebration — Ptak pops in with hearts, then fades */
+/* kudos celebration — a heart pops in, then fades */
 @keyframes kudos-pop {
   0% { transform: scale(0.4) rotate(-8deg); opacity: 0; }
   25% { transform: scale(1.1) rotate(3deg); opacity: 1; }
@@ -106,5 +107,5 @@
 }
 .kudos-pop {
   animation: kudos-pop 1.4s ease-in-out forwards;
-  filter: drop-shadow(0 8px 24px rgba(22, 24, 29, 0.18));
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.12));
 }

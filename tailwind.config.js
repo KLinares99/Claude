@@ -3,7 +3,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // RUNNER palette — clean light UI with a single bold accent.
+        // RUNNER palette — Apple iOS light-mode system colors + one accent.
         // The accent is CSS-variable driven (see src/lib/theme.ts) so users can
         // recolor the whole app; channels keep Tailwind's /opacity modifiers.
         brand: {
@@ -11,20 +11,21 @@ export default {
           dark: 'rgb(var(--brand-dark) / <alpha-value>)',
           soft: 'rgb(var(--brand-soft) / <alpha-value>)'
         },
-        ink: '#16181D',
-        dim: '#6B7280',
-        faint: '#9CA3AF',
-        line: '#E7E5E0',
-        paper: '#F7F6F3',
-        card: '#FFFFFF',
-        good: '#16A34A',
-        bad: '#DC2626'
+        ink: '#000000',    // label
+        dim: '#6C6C70',    // secondaryLabel
+        faint: '#AEAEB2',  // tertiaryLabel
+        line: '#E5E5EA',   // separator
+        paper: '#F2F2F7',  // systemGroupedBackground
+        card: '#FFFFFF',   // secondarySystemGroupedBackground
+        fill: '#EEEEF0',   // tertiarySystemFill (buttons, inputs, tracks)
+        good: '#248A3D',
+        bad: '#FF3B30'
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'system-ui', 'sans-serif']
+        sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Segoe UI', 'system-ui', 'sans-serif']
       },
       boxShadow: {
-        card: '0 1px 2px rgba(22, 24, 29, 0.04), 0 2px 8px rgba(22, 24, 29, 0.04)',
+        card: 'none',
         sheet: '0 -8px 30px rgba(22, 24, 29, 0.16)'
       }
     }

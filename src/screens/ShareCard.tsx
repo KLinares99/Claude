@@ -163,7 +163,7 @@ export default function ShareCard({
       >
         <div className="w-10 h-1 rounded-full bg-line mx-auto sm:hidden" />
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black">Share</h2>
+          <h2 className="text-lg font-bold">Share</h2>
           <button onClick={onClose} className="p-1 -mr-1 text-dim hover:text-ink" aria-label="Close share">
             <X size={22} />
           </button>

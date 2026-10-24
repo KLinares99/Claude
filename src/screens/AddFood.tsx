@@ -36,7 +36,7 @@ export default function AddFoodSheet({
       >
         <div className="w-10 h-1 rounded-full bg-line mx-auto sm:hidden" />
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black capitalize">Add to {meal}</h2>
+          <h2 className="text-lg font-bold capitalize">Add to {meal}</h2>
           <button onClick={onClose} className="p-1 -mr-1 text-dim hover:text-ink" aria-label="Close">
             <X size={22} />
           </button>
@@ -267,7 +267,7 @@ function MealsMode({ meal, date, onAdd }: { meal: Meal; date: string; onAdd: (it
           {meals.map((m) => {
             const t = mealTotals(m);
             return (
-              <div key={m.id} className="rounded-xl border border-line p-3">
+              <div key={m.id} className="rounded-xl bg-paper p-3">
                 <div className="flex items-start gap-2">
                   <button className="flex-1 text-left min-w-0" onClick={() => { setBatch(1); setLogging(m); }}>
                     <div className="font-bold truncate flex items-center gap-1.5">
@@ -317,7 +317,7 @@ function MealBuilder({
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-black">Add an ingredient</h3>
+          <h3 className="font-bold">Add an ingredient</h3>
           <button className="text-dim hover:text-ink text-sm font-bold" onClick={() => setAdding(false)}>Done</button>
         </div>
         <FoodSearch

@@ -13,6 +13,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: 12,
+    date: '2026-10-24',
+    title: 'A simpler, Apple-style look',
+    points: [
+      'Cleaner design modeled on Apple\'s own apps: large titles, flat grouped cards, sentence-case labels and a standard iOS tab bar.',
+      'Ptak has retired. The quote of the day is now a small card on Home instead of a pop-up.',
+      'Nothing else changed: every feature, setting and logged activity is right where you left it.'
+    ]
+  },
+  {
     v: 11,
     date: '2026-08-09',
     title: 'Log past workouts',

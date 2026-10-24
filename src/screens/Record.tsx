@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Play, Pause, Square, Satellite } from 'lucide-react';
+import { Play, Pause, Square, Satellite, CheckCircle2 } from 'lucide-react';
 import {
   fmtClock, paceFor, metersToMiles, caloriesFor, defaultRunName, RACE_DISTANCES,
   SPORTS, effortStat, type LatLng, type Sport
@@ -13,7 +13,8 @@ import {
 import { useStore } from '../lib/storage';
 import { accentHex } from '../lib/theme';
 import { toast } from '../lib/toast';
-import Mascot from '../components/Mascot';
+import Segmented from '../components/ui/Segmented';
+import SportIcon from '../components/ui/SportIcon';
 import Intervals from './Intervals';
 
 const DEFAULT_CENTER: LatLng = [41.1506, -73.9495];
@@ -88,40 +89,21 @@ export default function Record({ active }: { active: boolean }) {
     <>
     <div className="space-y-4">
       {/* mode toggle */}
-      <div className="card p-1 grid grid-cols-2 gap-1">
-        {(['run', 'intervals'] as Mode[]).map((m) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`rounded-xl py-2 text-sm font-bold transition-colors ${
-              mode === m ? 'bg-ink text-white' : 'text-dim hover:text-ink'
-            }`}
-          >
-            {m === 'run' ? 'Track' : 'Intervals'}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        value={mode}
+        onChange={setMode}
+        options={[{ id: 'run' as Mode, label: 'Track' }, { id: 'intervals' as Mode, label: 'Intervals' }]}
+      />
 
       {/* GPS run — the map stays in the DOM even in intervals mode */}
       <div className={mode === 'run' ? 'space-y-4' : 'hidden'}>
         {/* sport picker — locked once the session starts */}
-        <div className="flex gap-2">
-          {SPORTS.map((sp) => {
-            const on = s.sport === sp.id;
-            return (
-              <button
-                key={sp.id}
-                disabled={s.phase !== 'idle'}
-                onClick={() => trackerSetSport(sp.id as Sport)}
-                className={`flex-1 rounded-xl py-2 text-sm font-bold border transition-colors disabled:opacity-50 ${
-                  on ? 'border-brand bg-brand-soft text-brand' : 'border-line bg-card text-dim hover:text-ink'
-                }`}
-              >
-                {sp.emoji} {sp.label}
-              </button>
-            );
-          })}
-        </div>
+        <Segmented
+          value={s.sport}
+          disabled={s.phase !== 'idle'}
+          onChange={(sp) => trackerSetSport(sp as Sport)}
+          options={SPORTS.map((sp) => ({ id: sp.id, label: <><SportIcon sport={sp.id} /> {sp.label}</> }))}
+        />
 
         {/* isolate traps leaflet's internal z-indexes so the map can't
             paint over the app header, nav or modals */}
@@ -167,15 +149,15 @@ export default function Record({ active }: { active: boolean }) {
         <GoalCard elapsed={s.elapsed} miles={miles} goalMiles={s.goalMiles} />
 
         {s.error && (
-          <div className="card-pad border-l-4 !border-l-brand text-sm text-dim">{s.error}</div>
+          <div className="card-pad text-sm text-dim">{s.error}</div>
         )}
         {s.restored && (
-          <div className="card-pad border-l-4 !border-l-good text-sm text-dim">
+          <div className="card-pad text-sm text-dim">
             Your run was recovered after a reload — resume when ready.
           </div>
         )}
         {s.bridgedMeters > 0 && (
-          <div className="card-pad border-l-4 !border-l-good text-sm text-dim">
+          <div className="card-pad text-sm text-dim">
             <span className="font-bold text-ink">GPS gap bridged.</span> Your phone paused GPS while
             you were in another app, so {metersToMiles(s.bridgedMeters).toFixed(2)} mi was credited
             in a straight line — time kept counting the whole way. For an exact route, keep Runner
@@ -192,7 +174,7 @@ export default function Record({ active }: { active: boolean }) {
         {/* controls */}
         {s.phase === 'idle' && (
           <button
-            className="w-24 h-24 mx-auto rounded-full bg-brand hover:bg-brand-dark text-white font-black text-lg shadow-card flex items-center justify-center transition-colors active:scale-95"
+            className="w-24 h-24 mx-auto rounded-full bg-brand hover:bg-brand-dark text-white font-bold text-lg shadow-card flex items-center justify-center transition-colors active:scale-95"
             onClick={trackerStart}
           >
             Start
@@ -290,7 +272,7 @@ function GoalCard({ elapsed, miles, goalMiles }: { elapsed: number; miles: numbe
               key={d.label}
               onClick={() => trackerSetGoal(on ? null : d.miles)}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold border transition-colors ${
-                on ? 'border-brand bg-brand text-white' : 'border-line text-dim hover:text-ink'
+                on ? 'border-brand bg-brand text-white' : 'border-transparent bg-fill text-ink'
               }`}
             >
               {d.label}
@@ -359,10 +341,10 @@ function SaveSheet({
       >
         <div className="w-10 h-1 rounded-full bg-line mx-auto sm:hidden" />
         <div className="flex items-center gap-3">
-          <Mascot pose="coach" size={56} fallback={<span className="text-3xl">🦜</span>} />
+          <CheckCircle2 size={36} className="text-brand shrink-0" />
           <div>
-            <h2 className="text-lg font-black leading-tight">Nice run!</h2>
-            <p className="text-xs text-dim">Ptak's proud — name it and save.</p>
+            <h2 className="text-lg font-bold leading-tight">Nice work</h2>
+            <p className="text-sm text-dim">Name it and save.</p>
           </div>
         </div>
         <input className="input w-full text-base font-semibold" value={name} onChange={(e) => setName(e.target.value)} placeholder="Run name" />

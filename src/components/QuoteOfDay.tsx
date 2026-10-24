@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import Logo from './Logo';
-import Mascot from './Mascot';
 import { quoteForToday } from '../data/quotes';
 import { unseenChanges } from '../lib/changelog';
 import { localDateISO } from '../lib/nutrition';
 
 const SHOWN_KEY = 'runner:quoteShown';
 
-/** Quote / tip of the day — shows once per calendar day as the app opens.
- *  Skipped when a What's-new banner is waiting, so an update never opens
- *  with two "read me first" moments stacked; the quote returns tomorrow. */
+/** Quote / tip of the day — an inline card at the top of Home, once per
+ *  calendar day until dismissed. Skipped when a What's-new banner is
+ *  waiting, so an update never opens with two "read me first" moments
+ *  stacked; the quote returns tomorrow. */
 export default function QuoteOfDay() {
   const [open, setOpen] = useState(() => {
     try {
@@ -32,24 +31,13 @@ export default function QuoteOfDay() {
   };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-sm flex items-center justify-center p-6" onClick={dismiss}>
-      <div
-        className="bg-card rounded-3xl w-full max-w-[400px] p-6 shadow-sheet text-center space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <span className="label">Ptak's boost of the day</span>
-          <button onClick={dismiss} className="text-dim hover:text-ink p-1 -mr-1" aria-label="Dismiss">
-            <X size={20} />
-          </button>
-        </div>
-        <div className="mx-auto w-fit">
-          <Mascot pose="wave" size={112} fallback={<Logo size={44} />} />
-        </div>
-        <p className="text-lg font-bold leading-snug">“{q.text}”</p>
-        {q.by && <p className="text-sm text-dim">— {q.by}</p>}
-        <button className="btn-primary w-full py-3" onClick={dismiss}>Let's go</button>
-      </div>
+    <div className="card-pad card-in relative">
+      <button onClick={dismiss} className="absolute top-3 right-3 w-7 h-7 rounded-full bg-fill text-dim flex items-center justify-center active:opacity-60" aria-label="Dismiss">
+        <X size={15} strokeWidth={2.5} />
+      </button>
+      <div className="label mb-1">Quote of the Day</div>
+      <p className="text-[17px] font-semibold leading-snug pr-8">“{q.text}”</p>
+      {q.by && <p className="text-sm text-dim mt-1">{q.by}</p>}
     </div>
   );
 }

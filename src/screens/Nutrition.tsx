@@ -53,7 +53,7 @@ export default function Nutrition() {
         <button className="btn-ghost !px-3 !py-2" onClick={() => setDate(shiftDate(date, -1))} aria-label="Previous day">
           <ChevronLeft size={18} />
         </button>
-        <button className="font-black" onClick={() => setDate(localDateISO())}>
+        <button className="font-bold" onClick={() => setDate(localDateISO())}>
           {fmtRelDate(`${date}T12:00:00`)}
         </button>
         <button
@@ -68,8 +68,8 @@ export default function Nutrition() {
 
       {/* goals onboarding */}
       {!profile && (
-        <button className="card-pad w-full text-left border-l-4 !border-l-brand" onClick={() => setGoalsOpen(true)}>
-          <div className="font-black">Set up your nutrition goals</div>
+        <button className="card-pad w-full text-left" onClick={() => setGoalsOpen(true)}>
+          <div className="font-bold">Set up your nutrition goals</div>
           <p className="text-sm text-dim mt-1">
             Tell Runner your age, height and goal to get a personalized daily calorie
             target — until then the tracker uses a 2,000 kcal default.
@@ -81,7 +81,7 @@ export default function Nutrition() {
       {/* calories summary — the MFP formula */}
       <div className="card-pad">
         <div className="flex items-center justify-between">
-          <h2 className="font-black">Calories</h2>
+          <h2 className="font-bold">Calories</h2>
           <button className="text-dim hover:text-ink p-1" onClick={() => setGoalsOpen(true)} aria-label="Nutrition goals">
             <Settings2 size={18} />
           </button>
@@ -107,7 +107,7 @@ export default function Nutrition() {
 
       {/* macros */}
       <div className="card-pad">
-        <h2 className="font-black mb-3">Macros</h2>
+        <h2 className="font-bold mb-3">Macros</h2>
         <MacroBar label="Protein" value={totals.protein} target={macros.protein} color={accent} />
         <MacroBar label="Carbs" value={totals.carbs} target={macros.carbs} color="#16A34A" />
         <MacroBar label="Fat" value={totals.fat} target={macros.fat} color="#EAB308" />
@@ -120,7 +120,7 @@ export default function Nutrition() {
         return (
           <div key={meal} className="card-pad">
             <div className="flex items-center justify-between">
-              <h3 className="font-black">{MEAL_LABELS[meal]}</h3>
+              <h3 className="font-bold">{MEAL_LABELS[meal]}</h3>
               <span className="stat-num text-dim">{mealCals > 0 ? `${mealCals} kcal` : ''}</span>
             </div>
             {mealEntries.length > 0 && (
@@ -229,7 +229,7 @@ function GoalsSheet({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="w-10 h-1 rounded-full bg-line mx-auto sm:hidden" />
-        <h2 className="text-lg font-black">Nutrition goals</h2>
+        <h2 className="text-lg font-bold">Nutrition goals</h2>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="block">
@@ -277,7 +277,7 @@ function GoalsSheet({ onClose }: { onClose: () => void }) {
                 key={a.value}
                 onClick={() => setActivity(a.value)}
                 className={`w-full flex items-center justify-between rounded-xl border px-3 py-2 text-left ${
-                  activity === a.value ? 'border-brand bg-brand-soft' : 'border-line'
+                  activity === a.value ? 'border-brand bg-brand-soft' : 'border-transparent bg-fill'
                 }`}
               >
                 <span className="text-sm font-bold">{a.label}</span>
@@ -295,7 +295,7 @@ function GoalsSheet({ onClose }: { onClose: () => void }) {
                 key={g.value}
                 onClick={() => setGoal(g.value)}
                 className={`rounded-xl border px-2 py-2 text-center ${
-                  goal === g.value ? 'border-brand bg-brand-soft' : 'border-line'
+                  goal === g.value ? 'border-brand bg-brand-soft' : 'border-transparent bg-fill'
                 }`}
               >
                 <div className="text-sm font-bold">{g.label}</div>

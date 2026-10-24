@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Dumbbell, Plus, Play, X, Trash2, ChevronDown, ChevronRight, Timer,
-  Check, Search, History, LayoutGrid, ListChecks, Square
-} from 'lucide-react';
+  Check, Search, History, LayoutGrid, ListChecks, Square, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../lib/storage';
 import {
   MUSCLE_GROUPS, EXERCISES, SPLITS, exerciseById, exercisesFor, findSubgroup,
@@ -16,7 +15,6 @@ import {
 import { deleteRemoteWorkout } from '../lib/sync';
 import { fmtClock, fmtRelDate } from '../lib/run';
 import { toast } from '../lib/toast';
-import Mascot from '../components/Mascot';
 
 /**
  * Train tab — the weightlifting hub. Browse muscles → exercises with
@@ -45,10 +43,10 @@ export default function Train() {
       {/* my workouts */}
       <div className="card-pad">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-black text-base flex items-center gap-2">
+          <h2 className="font-bold text-base flex items-center gap-2">
             <ListChecks size={16} className="text-brand" /> My workouts
           </h2>
-          <button className="chip bg-card border border-line text-ink" onClick={() => setBuilding({ name: '', exercises: [] })}>
+          <button className="chip bg-fill text-brand" onClick={() => setBuilding({ name: '', exercises: [] })}>
             <Plus size={14} /> Build
           </button>
         </div>
@@ -89,7 +87,7 @@ export default function Train() {
 
       {/* splits */}
       <div className="card-pad">
-        <h2 className="font-black text-base flex items-center gap-2 mb-1">
+        <h2 className="font-bold text-base flex items-center gap-2 mb-1">
           <LayoutGrid size={16} className="text-brand" /> Splits
         </h2>
         <p className="text-xs text-dim mb-3">Proven weekly structures — tap a day to load it as a workout.</p>
@@ -114,7 +112,7 @@ export default function Train() {
 
       {/* muscle library */}
       <div className="card-pad">
-        <h2 className="font-black text-base flex items-center gap-2 mb-1">
+        <h2 className="font-bold text-base flex items-center gap-2 mb-1">
           <Dumbbell size={16} className="text-brand" /> Muscle library
         </h2>
         <p className="text-xs text-dim mb-3">
@@ -156,7 +154,7 @@ function SplitCard({
 }: { name: string; desc: string; days: SplitDay[]; onPickDay: (d: SplitDay) => void }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border border-line rounded-xl overflow-hidden">
+    <div className="bg-paper rounded-xl overflow-hidden">
       <button className="w-full flex items-center gap-2 p-3 text-left" onClick={() => setOpen(!open)}>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold">{name}</div>
@@ -167,7 +165,7 @@ function SplitCard({
       {open && (
         <div className="px-3 pb-3 flex flex-wrap gap-2">
           {days.map((d) => (
-            <button key={d.name} className="chip bg-paper text-ink border border-line hover:border-brand" onClick={() => onPickDay(d)}>
+            <button key={d.name} className="chip bg-fill text-ink" onClick={() => onPickDay(d)}>
               <Play size={12} className="text-brand" /> {d.name}
             </button>
           ))}
@@ -184,9 +182,8 @@ function MuscleGroupRow({ groupId, onShow }: { groupId: string; onShow: (e: Exer
   const [open, setOpen] = useState(false);
   const [sub, setSub] = useState<string | null>(null);
   return (
-    <div className="border border-line rounded-xl overflow-hidden">
+    <div className="bg-paper rounded-xl overflow-hidden">
       <button className="w-full flex items-center gap-2.5 p-3 text-left" onClick={() => setOpen(!open)}>
-        <span className="text-xl">{g.emoji}</span>
         <span className="flex-1 text-sm font-bold">{g.name}</span>
         <span className="text-[11px] text-faint">{g.subgroups.length} areas</span>
         <ChevronDown size={16} className={`text-faint transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -250,7 +247,7 @@ function ExerciseSheet({ ex, onClose }: { ex: Exercise; onClose: () => void }) {
         <div className="w-10 h-1 rounded-full bg-line mx-auto sm:hidden" />
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h2 className="text-lg font-black leading-tight">{ex.name}</h2>
+            <h2 className="text-lg font-bold leading-tight">{ex.name}</h2>
             <p className="text-[11px] text-dim capitalize">{ex.equipment}</p>
           </div>
           <button onClick={onClose} className="p-1 -mr-1 text-dim hover:text-ink" aria-label="Close exercise">
@@ -353,7 +350,7 @@ function TempoTimer({ ex, onClose }: { ex: Exercise; onClose: () => void }) {
     <div className="fixed inset-0 z-[70] bg-ink/95 flex flex-col items-center justify-center gap-6 text-white" onClick={(e) => e.stopPropagation()}>
       <p className="text-sm font-bold text-white/60">{ex.name}</p>
       <div className="text-center">
-        <div className="text-6xl font-black">{PHASES[phaseIdx] ?? 'Go'}</div>
+        <div className="text-6xl font-bold">{PHASES[phaseIdx] ?? 'Go'}</div>
         <div className="stat-num !text-white text-8xl mt-2">{left}</div>
       </div>
       <div className="flex items-center gap-2 text-white/70 text-sm font-bold nums">
@@ -363,7 +360,7 @@ function TempoTimer({ ex, onClose }: { ex: Exercise; onClose: () => void }) {
           </span>
         ))}
       </div>
-      <p className="text-sm text-white/60 nums">Reps completed: <span className="font-black text-white">{reps}</span></p>
+      <p className="text-sm text-white/60 nums">Reps completed: <span className="font-bold text-white">{reps}</span></p>
       <div className="flex gap-3">
         <button className="btn-ghost !bg-white/10 !text-white !border-white/20" onClick={() => setRunning(!running)}>
           {running ? 'Pause' : 'Resume'}
@@ -411,7 +408,7 @@ function BuilderSheet({
       >
         <div className="w-10 h-1 rounded-full bg-line mx-auto sm:hidden" />
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black">Build workout</h2>
+          <h2 className="text-lg font-bold">Build workout</h2>
           <button onClick={onClose} className="p-1 -mr-1 text-dim hover:text-ink" aria-label="Close builder">
             <X size={22} />
           </button>
@@ -518,7 +515,7 @@ function ExercisePicker({ onPick, onDone }: { onPick: (e: Exercise) => void; onD
   }, [q]);
 
   return (
-    <div className="border border-line rounded-xl p-3 space-y-2">
+    <div className="bg-paper rounded-xl p-3 space-y-2">
       <div className="flex items-center gap-2">
         <Search size={14} className="text-faint shrink-0" />
         <input
@@ -593,7 +590,7 @@ function LiveWorkout({ onShowDetail }: { onShowDetail: (e: Exercise) => void }) 
         <div className="flex items-center justify-between">
           <div>
             <div className="label">Live workout</div>
-            <h2 className="text-xl font-black leading-tight">{s.name}</h2>
+            <h2 className="text-xl font-bold leading-tight">{s.name}</h2>
           </div>
           <div className="text-right">
             <div className="stat-num text-3xl">{fmtClock(s.elapsed)}</div>
@@ -707,11 +704,11 @@ function ExerciseLogCard({
     <div className="card-pad">
       <div className="flex items-center gap-2">
         <button className="flex-1 min-w-0 text-left" onClick={onShowDetail}>
-          <div className="text-sm font-black truncate">{name}</div>
+          <div className="text-sm font-bold truncate">{name}</div>
           {target && <div className="text-[11px] text-dim nums">Target {target}{ex ? ` · rest ${Math.round(ex.rest / 60 * 10) / 10} min` : ''}</div>}
         </button>
         {ex && ex.tempo.some((t) => t > 0) && (
-          <button className="chip bg-paper text-ink border border-line shrink-0" onClick={() => setTempoOpen(true)}>
+          <button className="chip bg-fill text-ink shrink-0" onClick={() => setTempoOpen(true)}>
             <Timer size={12} className="text-brand" /> Tempo
           </button>
         )}
@@ -772,10 +769,10 @@ function FinishSheet({
       >
         <div className="w-10 h-1 rounded-full bg-line mx-auto sm:hidden" />
         <div className="flex items-center gap-3">
-          <Mascot pose="coach" size={56} fallback={<span className="text-3xl">🦜</span>} />
+          <CheckCircle2 size={36} className="text-brand shrink-0" />
           <div>
-            <h2 className="text-lg font-black leading-tight">Strong work!</h2>
-            <p className="text-xs text-dim">Ptak says the pump is real.</p>
+            <h2 className="text-lg font-bold leading-tight">Workout complete</h2>
+            <p className="text-sm text-dim">Rate the effort and save.</p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
@@ -795,10 +792,10 @@ function FinishSheet({
                   key={i.id}
                   onClick={() => setIntensity(on ? null : i.id)}
                   className={`rounded-xl py-2 text-center border transition-colors ${
-                    on ? 'border-brand bg-brand-soft text-brand' : 'border-line text-dim hover:text-ink'
+                    on ? 'border-brand bg-brand-soft text-brand' : 'border-transparent bg-fill text-ink'
                   }`}
                 >
-                  <span className="block text-xs font-black">{i.label}</span>
+                  <span className="block text-xs font-bold">{i.label}</span>
                   <span className="block text-[9px] font-bold opacity-70">{i.rpe}</span>
                 </button>
               );
@@ -823,10 +820,10 @@ function WorkoutHistory({ logs, onLogPast }: { logs: WorkoutLog[]; onLogPast: ()
   return (
     <div className="card-pad">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="font-black text-base flex items-center gap-2">
+        <h2 className="font-bold text-base flex items-center gap-2">
           <History size={16} className="text-brand" /> History
         </h2>
-        <button className="chip bg-card border border-line text-ink" onClick={onLogPast}>
+        <button className="chip bg-fill text-brand" onClick={onLogPast}>
           <Plus size={14} /> Log past
         </button>
       </div>
@@ -842,7 +839,7 @@ function WorkoutHistory({ logs, onLogPast }: { logs: WorkoutLog[]; onLogPast: ()
               <div className="text-sm font-bold truncate flex items-center gap-1.5">
                 <span className="truncate">{l.name}</span>
                 {intensityOf(l.intensity) && (
-                  <span className="shrink-0 text-[9px] font-black uppercase tracking-wide text-brand bg-brand-soft rounded px-1.5 py-px">
+                  <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-brand bg-brand-soft rounded px-1.5 py-px">
                     {intensityOf(l.intensity)?.label}
                   </span>
                 )}
@@ -920,7 +917,7 @@ function ManualWorkoutSheet({
       >
         <div className="w-10 h-1 rounded-full bg-line mx-auto sm:hidden" />
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black">Log a past workout</h2>
+          <h2 className="text-lg font-bold">Log a past workout</h2>
           <button onClick={onClose} className="p-1 -mr-1 text-dim hover:text-ink" aria-label="Close manual workout">
             <X size={22} />
           </button>
@@ -953,10 +950,10 @@ function ManualWorkoutSheet({
                   key={i.id}
                   onClick={() => setIntensity(on ? null : i.id)}
                   className={`rounded-xl py-2 text-center border transition-colors ${
-                    on ? 'border-brand bg-brand-soft text-brand' : 'border-line text-dim hover:text-ink'
+                    on ? 'border-brand bg-brand-soft text-brand' : 'border-transparent bg-fill text-ink'
                   }`}
                 >
-                  <span className="block text-xs font-black">{i.label}</span>
+                  <span className="block text-xs font-bold">{i.label}</span>
                   <span className="block text-[9px] font-bold opacity-70">{i.rpe}</span>
                 </button>
               );

@@ -14,7 +14,7 @@ export default function Friends() {
 
   return (
     <div className="card-pad space-y-3">
-      <h2 className="font-black flex items-center gap-2">
+      <h2 className="font-bold flex items-center gap-2">
         <Users size={16} className="text-brand" /> Friends
       </h2>
       {!s.friendsReady ? (
@@ -33,7 +33,7 @@ export default function Friends() {
               <div className="divide-y divide-line">
                 {s.following.map((f) => (
                   <div key={f.id} className="py-2 flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-full bg-ink text-white font-black text-xs flex items-center justify-center shrink-0">
+                    <span className="w-8 h-8 rounded-full bg-ink text-white font-bold text-xs flex items-center justify-center shrink-0">
                       {f.name.slice(0, 1).toUpperCase()}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -41,7 +41,7 @@ export default function Friends() {
                       {f.username && <div className="text-[11px] text-dim">@{f.username}</div>}
                     </div>
                     <button
-                      className="chip bg-paper text-dim border border-line hover:text-bad"
+                      className="chip bg-fill text-bad"
                       onClick={() => {
                         if (confirm(`Unfollow ${f.name}? Their runs and workouts leave your feed.`)) {
                           void unfollowUser(f.id);
@@ -87,7 +87,7 @@ function UsernameRow({ current }: { current: string }) {
     return (
       <div className="bg-paper rounded-xl p-3 flex items-center gap-2">
         <AtSign size={16} className="text-brand shrink-0" />
-        <span className="flex-1 text-sm font-black">@{current}</span>
+        <span className="flex-1 text-sm font-bold">@{current}</span>
         <button
           className="text-dim hover:text-ink p-1"
           aria-label="Copy username"

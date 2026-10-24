@@ -430,7 +430,7 @@ function drawLabel(ctx: CanvasRenderingContext2D, text: string, cx: number, y: n
 }
 
 /**
- * Runner logomark (the Logo.tsx tile: orange rounded square, white ascending
+ * Runner logomark (the app-icon tile: orange rounded square, white ascending
  * route line + endpoint dot, 48-unit viewBox) plus the "RUNNER" wordmark,
  * drawn as one centered row. `cy` is the vertical center of the row.
  */
@@ -453,7 +453,7 @@ function drawLogoRow(ctx: CanvasRenderingContext2D, cx: number, cy: number, acce
   roundedRect(ctx, left, tileY, TILE, TILE, TILE * 0.25);
   ctx.fill();
 
-  // route line + dot, scaled from the 48×48 Logo.tsx path
+  // route line + dot, scaled from the 48×48 app-icon path
   const s = TILE / 48;
   const px = (v: number) => left + v * s;
   const py = (v: number) => tileY + v * s;

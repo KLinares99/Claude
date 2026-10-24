@@ -16,12 +16,12 @@ export default function WhatsNew() {
   };
 
   return (
-    <div className="card-pad border-l-4 !border-l-brand">
+    <div className="card-pad">
       <div className="flex items-start gap-2.5">
         <Sparkles size={18} className="text-brand shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="font-black text-base">What's new — {latest.title}</h2>
+            <h2 className="font-bold text-base">What's new — {latest.title}</h2>
             <button onClick={dismiss} aria-label="Dismiss what's new" className="text-dim hover:text-ink p-1 -mr-1 shrink-0">
               <X size={18} />
             </button>
@@ -29,7 +29,7 @@ export default function WhatsNew() {
           <ul className="mt-2 space-y-1.5">
             {latest.points.map((p, i) => (
               <li key={i} className="text-sm text-dim leading-snug flex gap-2">
-                <span className="text-brand font-black shrink-0">·</span>
+                <span className="text-brand font-bold shrink-0">·</span>
                 <span>{p}</span>
               </li>
             ))}

@@ -37,7 +37,7 @@ export default function Intervals() {
             key={p.id}
             onClick={() => intervalSelect(i)}
             className={`shrink-0 rounded-xl px-3 py-2 text-left border transition-colors ${
-              i === s.workoutIdx ? 'border-brand bg-brand-soft' : 'border-line bg-card'
+              i === s.workoutIdx ? 'border-brand bg-brand-soft' : 'border-transparent bg-card'
             }`}
           >
             <div className="text-xs font-bold">{p.name}</div>

@@ -17,7 +17,7 @@ export default function CoupleSync() {
 
   return (
     <div className="card-pad space-y-3">
-      <h2 className="font-black flex items-center gap-2">
+      <h2 className="font-bold flex items-center gap-2">
         <HeartHandshake size={16} className="text-brand" /> Couple sync
       </h2>
       {!s.configured && <ConfigStep />}

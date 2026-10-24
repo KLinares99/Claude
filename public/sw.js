@@ -1,7 +1,7 @@
 /* RUNNER service worker — offline app shell.
    Network-first for navigations (so updates land), cache-first for static
    assets. Bump CACHE to invalidate after a deploy. */
-const CACHE = 'runner-v9';
+const CACHE = 'runner-v10';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -36,15 +36,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // static assets: cache-first, then network (and cache it). Also cache the
-  // mascot art served from the image CDN so it works offline after first load.
-  const cacheable = request.url.includes('/mascot/') || request.url.includes('cloudfront.net');
+  // static assets: cache-first, then network (and cache it)
   event.respondWith(
     caches.match(request).then(
       (cached) =>
         cached ||
         fetch(request).then((res) => {
-          if (res.ok && (res.type === 'basic' || cacheable)) {
+          if (res.ok && res.type === 'basic') {
             const copy = res.clone();
             caches.open(CACHE).then((c) => c.put(request, copy));
           }

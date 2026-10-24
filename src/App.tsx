@@ -1,13 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import Nav, { type Tab } from './components/Nav';
-import Logo from './components/Logo';
 import Home from './screens/Home';
 import Record from './screens/Record';
 import Train from './screens/Train';
 import Nutrition from './screens/Nutrition';
 import Profile from './screens/Profile';
 import Toast from './components/ui/Toast';
-import QuoteOfDay from './components/QuoteOfDay';
 import { trackerSubscribe, trackerGet } from './lib/tracker';
 import { liftSubscribe, liftGet } from './lib/training';
 import { useStore } from './lib/storage';
@@ -15,7 +13,7 @@ import { applyAccent } from './lib/theme';
 import { fmtClock, metersToMiles } from './lib/run';
 
 const titles: Record<Tab, string> = {
-  home: 'Runner',
+  home: 'Home',
   record: 'Record',
   train: 'Train',
   nutrition: 'Nutrition',
@@ -36,17 +34,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-paper">
-      <header
-        className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      <main
+        className="max-w-[480px] mx-auto px-4 pb-32"
+        style={{ paddingTop: 'calc(16px + env(safe-area-inset-top))' }}
       >
-        <div className="max-w-[480px] mx-auto px-4 h-14 flex items-center gap-2.5">
-          <Logo size={26} />
-          <h1 className="font-black tracking-tight text-lg">{titles[tab]}</h1>
-        </div>
-      </header>
+        {/* iOS large title — scrolls with the content */}
+        <h1 className="large-title pt-2 mb-4">{titles[tab]}</h1>
 
-      <main className="max-w-[480px] mx-auto px-4 pt-4 pb-32">
         {tab === 'home' && <Home />}
         {/* Record stays mounted so the map, timer and GPS session never
             reset on tab switches — it's only hidden with CSS. */}
@@ -65,9 +59,9 @@ export default function App() {
           className="fixed inset-x-0 z-40 flex justify-center px-4"
           style={{ bottom: 'calc(76px + env(safe-area-inset-bottom))' }}
         >
-          <span className="flex items-center gap-2.5 bg-ink text-white rounded-full pl-3 pr-4 py-2 shadow-lg max-w-[480px] w-full justify-center">
+          <span className="flex items-center gap-2.5 bg-ink/90 backdrop-blur-xl text-white rounded-full pl-3 pr-4 py-2 shadow-lg max-w-[480px] w-full justify-center">
             <span className="w-2.5 h-2.5 rounded-full bg-brand rec-dot" />
-            <span className="text-sm font-bold nums">Lifting · {lift.name} · {fmtClock(lift.elapsed)}</span>
+            <span className="text-sm font-semibold nums">Lifting · {lift.name} · {fmtClock(lift.elapsed)}</span>
           </span>
         </button>
       )}
@@ -79,9 +73,9 @@ export default function App() {
           className="fixed inset-x-0 z-40 flex justify-center px-4"
           style={{ bottom: 'calc(76px + env(safe-area-inset-bottom))' }}
         >
-          <span className="flex items-center gap-2.5 bg-ink text-white rounded-full pl-3 pr-4 py-2 shadow-lg max-w-[480px] w-full justify-center">
+          <span className="flex items-center gap-2.5 bg-ink/90 backdrop-blur-xl text-white rounded-full pl-3 pr-4 py-2 shadow-lg max-w-[480px] w-full justify-center">
             <span className={`w-2.5 h-2.5 rounded-full ${tracker.phase === 'running' ? 'bg-brand rec-dot' : 'bg-faint'}`} />
-            <span className="text-sm font-bold nums">
+            <span className="text-sm font-semibold nums">
               {tracker.phase === 'running' ? 'Recording' : 'Paused'} · {fmtClock(tracker.elapsed)} · {metersToMiles(tracker.meters).toFixed(2)} mi
             </span>
           </span>
@@ -90,7 +84,6 @@ export default function App() {
 
       <Nav active={tab} recording={recording} onChange={setTab} />
       <Toast />
-      <QuoteOfDay />
     </div>
   );
 }

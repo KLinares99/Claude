@@ -143,7 +143,7 @@ export default function Profile({ onOpenNutrition }: { onOpenNutrition?: () => v
             {data.settings.photo ? (
               <img src={data.settings.photo} alt="Your photo" className="w-full h-full object-cover" />
             ) : (
-              <span className="w-full h-full rounded-full bg-brand text-white font-black text-2xl flex items-center justify-center">
+              <span className="w-full h-full rounded-full bg-brand text-white font-bold text-2xl flex items-center justify-center">
                 {data.settings.name.slice(0, 1).toUpperCase() || 'R'}
               </span>
             )}
@@ -153,7 +153,7 @@ export default function Profile({ onOpenNutrition }: { onOpenNutrition?: () => v
           </button>
           <div className="flex-1 min-w-0">
             <input
-              className="text-xl font-black bg-transparent focus:outline-none w-full"
+              className="text-xl font-bold bg-transparent focus:outline-none w-full"
               value={data.settings.name}
               placeholder="Your name"
               onChange={(e) => update((d) => ({ ...d, settings: { ...d.settings, name: e.target.value } }))}
@@ -191,7 +191,7 @@ export default function Profile({ onOpenNutrition }: { onOpenNutrition?: () => v
 
       {/* all-time totals */}
       <div className="card-pad">
-        <h2 className="font-black mb-3">All time</h2>
+        <h2 className="font-bold mb-3">All time</h2>
         <div className="grid grid-cols-3 gap-2">
           <Total label="Activities" value={`${best.count}`} />
           <Total label="Distance" value={best.totalMiles.toFixed(1)} unit="mi" />
@@ -212,7 +212,7 @@ export default function Profile({ onOpenNutrition }: { onOpenNutrition?: () => v
 
       {/* weekly mileage chart */}
       <div className="card-pad">
-        <h2 className="font-black mb-1">Weekly mileage</h2>
+        <h2 className="font-bold mb-1">Weekly mileage</h2>
         <p className="text-xs text-dim mb-3">Last 8 weeks</p>
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={weeks} margin={{ left: -22, right: 4, top: 4 }}>
@@ -230,9 +230,9 @@ export default function Profile({ onOpenNutrition }: { onOpenNutrition?: () => v
 
       {/* best efforts */}
       <div className="card-pad">
-        <h2 className="font-black mb-3 flex items-center gap-2">
+        <h2 className="font-bold mb-3 flex items-center gap-2">
           <Trophy size={16} className="text-brand" /> Best efforts
-          <span className="text-[10px] font-bold text-faint uppercase tracking-wide ml-auto">runs only</span>
+          <span className="text-xs text-faint ml-auto">Runs only</span>
         </h2>
         <div className="divide-y divide-line">
           <Effort
@@ -259,7 +259,7 @@ export default function Profile({ onOpenNutrition }: { onOpenNutrition?: () => v
 
       {/* settings */}
       <div className="card-pad space-y-3">
-        <h2 className="font-black">Settings</h2>
+        <h2 className="font-bold">Settings</h2>
         <SettingRow label="Weekly goal (miles)">
           <input
             className="input w-24 text-center"
@@ -287,7 +287,7 @@ export default function Profile({ onOpenNutrition }: { onOpenNutrition?: () => v
 
       {/* data & backup */}
       <div className="card-pad space-y-3">
-        <h2 className="font-black">Data & backup</h2>
+        <h2 className="font-bold">Data & backup</h2>
         <div className="flex gap-3 items-start">
           <Shield size={18} className="text-good shrink-0 mt-0.5" />
           <p className="text-xs text-dim leading-relaxed">
@@ -361,7 +361,7 @@ function UsdaKeyCard() {
 
   return (
     <div className="card-pad space-y-3">
-      <h2 className="font-black">Food database key</h2>
+      <h2 className="font-bold">Food database key</h2>
       <p className="text-xs text-dim leading-relaxed">
         Food search already works out of the box on a shared key. If searches ever
         say they can't reach the database, it's the shared key hitting its hourly

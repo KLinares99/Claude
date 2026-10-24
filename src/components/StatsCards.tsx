@@ -33,7 +33,7 @@ export function RaceTimesCard({ activities, accent }: { activities: Activity[]; 
   if (unlocked.length === 0) {
     return (
       <div className="card-pad">
-        <h2 className="font-black mb-2 flex items-center gap-2">
+        <h2 className="font-bold mb-2 flex items-center gap-2">
           <Trophy size={16} className="text-brand" /> Race times
         </h2>
         <p className="text-sm text-dim">Log a run and your best 5K, 10K and beyond will show up here.</p>
@@ -43,9 +43,9 @@ export function RaceTimesCard({ activities, accent }: { activities: Activity[]; 
 
   return (
     <div className="card-pad">
-      <h2 className="font-black mb-3 flex items-center gap-2">
+      <h2 className="font-bold mb-3 flex items-center gap-2">
         <Trophy size={16} className="text-brand" /> Race times
-        <span className="text-[10px] font-bold text-faint uppercase tracking-wide ml-auto">runs only</span>
+        <span className="text-xs text-faint ml-auto">Runs only</span>
       </h2>
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 mb-3">
@@ -56,7 +56,7 @@ export function RaceTimesCard({ activities, accent }: { activities: Activity[]; 
               key={b.label}
               onClick={() => setSel(b.label)}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold border transition-colors ${
-                on ? 'border-brand bg-brand text-white' : 'border-line text-dim hover:text-ink'
+                on ? 'border-brand bg-brand text-white' : 'border-transparent bg-fill text-ink'
               }`}
             >
               {b.label}
@@ -157,7 +157,7 @@ export function NutritionSummaryCard({
         <Utensils size={16} className="text-brand shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-sm font-black">Nutrition today</span>
+            <span className="text-sm font-bold">Nutrition today</span>
             <span className="text-sm font-bold nums">
               {eaten}{target != null && <span className="text-dim font-semibold"> / {target}</span>}
               <span className="text-dim text-xs font-semibold"> kcal</span>

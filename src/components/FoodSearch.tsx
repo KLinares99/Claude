@@ -147,7 +147,7 @@ function Row({
         <div className="text-sm font-semibold truncate flex items-center gap-1.5">
           <span className="truncate">{food.name}</span>
           {tag && (
-            <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-faint border border-line rounded px-1 py-px">
+            <span className="shrink-0 text-[10px] font-semibold text-dim bg-fill rounded px-1.5 py-px">
               {tag === 'usda' ? 'USDA' : 'OFF'}
             </span>
           )}
