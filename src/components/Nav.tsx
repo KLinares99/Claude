@@ -1,6 +1,6 @@
-import { Home, User, CircleDot, UtensilsCrossed, Dumbbell, Square } from 'lucide-react';
+import { Home, User, CircleDot, UtensilsCrossed, Square } from 'lucide-react';
 
-export type Tab = 'home' | 'record' | 'train' | 'nutrition' | 'you';
+export type Tab = 'home' | 'record' | 'nutrition' | 'you';
 
 /** Standard iOS tab bar: translucent material, hairline top edge, tinted
  *  active item, every label on one baseline. */
@@ -18,7 +18,7 @@ export default function Nav({
       className="fixed bottom-0 inset-x-0 z-40 border-t border-black/10 bg-card/80 backdrop-blur-xl backdrop-saturate-150"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="max-w-[480px] mx-auto grid grid-cols-5">
+      <div className="max-w-[480px] mx-auto grid grid-cols-4">
         <NavButton on={active === 'home'} label="Home" onClick={() => onChange('home')}>
           <Home size={24} strokeWidth={active === 'home' ? 2.4 : 1.8} />
         </NavButton>
@@ -29,10 +29,6 @@ export default function Nav({
           ) : (
             <CircleDot size={24} strokeWidth={active === 'record' ? 2.4 : 1.8} />
           )}
-        </NavButton>
-
-        <NavButton on={active === 'train'} label="Train" onClick={() => onChange('train')}>
-          <Dumbbell size={24} strokeWidth={active === 'train' ? 2.4 : 1.8} />
         </NavButton>
 
         <NavButton on={active === 'nutrition'} label="Nutrition" onClick={() => onChange('nutrition')}>

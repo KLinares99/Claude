@@ -13,6 +13,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: 13,
+    date: '2026-10-28',
+    title: 'Train tab removed',
+    points: [
+      'The Train tab is gone, so the app now has four tabs: Home, Record, Nutrition and You.',
+      'Lift workouts you already logged are still saved and still show in your Home feed.'
+    ]
+  },
+  {
     v: 12,
     date: '2026-10-24',
     title: 'A simpler, Apple-style look',
