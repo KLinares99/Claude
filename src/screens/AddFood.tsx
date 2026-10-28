@@ -28,9 +28,9 @@ export default function AddFoodSheet({
   const [mode, setMode] = useState<Mode>('search');
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/25 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
-        className="bg-card rounded-t-3xl sm:rounded-3xl w-full max-w-[480px] p-5 space-y-4 shadow-sheet h-[88vh] sm:h-auto sm:max-h-[88vh] overflow-y-auto"
+        className="glass-sheet rounded-t-[32px] sm:rounded-[32px] w-full max-w-[480px] p-5 space-y-4 h-[88vh] sm:h-auto sm:max-h-[88vh] overflow-y-auto"
         style={{ paddingBottom: 'calc(20px + env(safe-area-inset-bottom))' }}
         onClick={(e) => e.stopPropagation()}
       >

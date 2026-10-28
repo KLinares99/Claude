@@ -25,12 +25,12 @@ export default function Toast() {
   return (
     <div
       className="fixed inset-x-0 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none"
-      style={{ bottom: 'calc(84px + env(safe-area-inset-bottom))' }}
+      style={{ bottom: 'calc(92px + env(safe-area-inset-bottom))' }}
     >
       {items.map((i) => (
         <div
           key={i.id}
-          className="flex items-center gap-2 rounded-full bg-ink/90 backdrop-blur-xl text-white px-4 py-2.5 shadow-lg max-w-[480px]"
+          className="glass-dark flex items-center gap-2 rounded-full px-4 py-2.5 max-w-[480px]"
         >
           <CheckCircle2 size={18} className="text-good shrink-0" />
           <span className="text-sm font-medium">{i.msg}</span>

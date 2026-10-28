@@ -13,6 +13,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: 14,
+    date: '2026-10-28',
+    title: 'Liquid Glass',
+    points: [
+      'The tab bar is now a floating glass capsule, and a glass title bar fades in as you scroll.',
+      'Sheets, map buttons, banners and toasts use the same glass. Turn on Reduce Transparency in your phone\'s accessibility settings for solid surfaces instead.'
+    ]
+  },
+  {
     v: 13,
     date: '2026-10-28',
     title: 'Train tab removed',

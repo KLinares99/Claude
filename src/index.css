@@ -109,3 +109,73 @@
   animation: kudos-pop 1.4s ease-in-out forwards;
   filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.12));
 }
+
+/* ---- Liquid Glass (iOS 26) ------------------------------------------------
+   Glass lives on the navigation/control layer only — tab bar, top bar,
+   sheets, floating map buttons, banners — never on content cards.
+   Layers: translucent fill + blur/saturate (refraction), a bright top inner
+   edge (specular rim), a soft sheen across the top-left, and a lift shadow.
+   Falls back to solid fills without backdrop-filter or when the user asks
+   for reduced transparency. */
+@layer components {
+.glass,
+.glass-dark,
+.glass-sheet,
+.glass-bar {
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  backdrop-filter: blur(24px) saturate(190%);
+}
+.glass {
+  position: relative;
+  isolation: isolate;
+  background: rgba(255, 255, 255, 0.58);
+  border: 0.5px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.95),
+    inset 0 -0.5px 0 rgba(0, 0, 0, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 45%);
+}
+.glass-dark {
+  background: rgba(28, 28, 30, 0.6);
+  color: #fff;
+  border: 0.5px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.25),
+    0 8px 28px rgba(0, 0, 0, 0.22);
+}
+/* sheets need more body behind text: regular (not clear) glass */
+.glass-sheet {
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 1),
+    0 -8px 40px rgba(0, 0, 0, 0.16);
+}
+/* edge-to-edge bar (scroll-edge top bar, sticky headers) */
+.glass-bar {
+  background: rgba(242, 242, 247, 0.72);
+  box-shadow: inset 0 -0.5px 0 rgba(0, 0, 0, 0.12);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass, .glass-sheet { background: rgba(255, 255, 255, 0.96); }
+  .glass-dark { background: rgba(28, 28, 30, 0.94); }
+  .glass-bar { background: rgba(242, 242, 247, 0.97); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass-sheet { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .glass-dark { background: #1c1c1e; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .glass-bar { background: #f2f2f7; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .glass::before { display: none; }
+}
+}

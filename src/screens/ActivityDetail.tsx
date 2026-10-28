@@ -175,7 +175,7 @@ export default function ActivityDetail({
   return (
     <div className="fixed inset-0 z-50 bg-paper overflow-y-auto">
       <header
-        className="sticky top-0 z-10 bg-paper/90 backdrop-blur border-b border-line"
+        className="sticky top-0 z-10 glass-bar"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="max-w-[480px] mx-auto px-4 h-14 flex items-center justify-between">
@@ -229,8 +229,8 @@ export default function ActivityDetail({
             <div ref={mapDiv} className="w-full h-64" />
             <button
               onClick={toggleSatellite}
-              className={`absolute top-3 left-3 z-[500] inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-xs font-bold shadow-lg backdrop-blur active:scale-95 transition-transform ${
-                satellite ? 'bg-brand text-white' : 'bg-white/90 text-ink'
+              className={`absolute top-3 left-3 z-[500] inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-xs font-semibold active:scale-95 transition-transform ${
+                satellite ? 'glass-dark' : 'glass text-ink'
               }`}
               aria-label={satellite ? 'Switch to street map' : 'Switch to satellite'}
             >
@@ -239,7 +239,7 @@ export default function ActivityDetail({
             </button>
             <button
               onClick={flying ? endFlyover : startFlyover}
-              className="absolute bottom-3 right-3 z-[500] inline-flex items-center gap-1.5 rounded-full bg-ink/90 text-white pl-3 pr-4 py-2 text-xs font-bold shadow-lg backdrop-blur active:scale-95 transition-transform"
+              className="glass-dark absolute bottom-3 right-3 z-[500] inline-flex items-center gap-1.5 rounded-full pl-3 pr-4 py-2 text-xs font-semibold active:scale-95 transition-transform"
               aria-label={flying ? 'Stop flyover' : 'Play flyover'}
             >
               {flying ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}

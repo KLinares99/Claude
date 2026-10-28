@@ -23,6 +23,19 @@ export default function App() {
   const { data } = useStore();
   const recording = tracker.phase !== 'idle';
 
+  // scroll-edge effect: the glass top bar (with a compact title) fades in
+  // once the large title has scrolled away
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 44);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [tab]);
+
   // recolor the whole app whenever the accent setting changes
   useEffect(() => {
     applyAccent(data.settings.accent);
@@ -30,6 +43,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-paper">
+      <div
+        className={`glass-bar fixed top-0 inset-x-0 z-30 transition-opacity duration-200 ${scrolled ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+        aria-hidden={!scrolled}
+      >
+        <div className="h-11 flex items-center justify-center text-[17px] font-semibold">{titles[tab]}</div>
+      </div>
       <main
         className="max-w-[480px] mx-auto px-4 pb-32"
         style={{ paddingTop: 'calc(16px + env(safe-area-inset-top))' }}
@@ -52,9 +72,9 @@ export default function App() {
         <button
           onClick={() => setTab('record')}
           className="fixed inset-x-0 z-40 flex justify-center px-4"
-          style={{ bottom: 'calc(76px + env(safe-area-inset-bottom))' }}
+          style={{ bottom: 'calc(84px + env(safe-area-inset-bottom))' }}
         >
-          <span className="flex items-center gap-2.5 bg-ink/90 backdrop-blur-xl text-white rounded-full pl-3 pr-4 py-2 shadow-lg max-w-[480px] w-full justify-center">
+          <span className="glass-dark flex items-center gap-2.5 rounded-full pl-3 pr-4 py-2 max-w-[420px] w-full justify-center">
             <span className={`w-2.5 h-2.5 rounded-full ${tracker.phase === 'running' ? 'bg-brand rec-dot' : 'bg-faint'}`} />
             <span className="text-sm font-semibold nums">
               {tracker.phase === 'running' ? 'Recording' : 'Paused'} · {fmtClock(tracker.elapsed)} · {metersToMiles(tracker.meters).toFixed(2)} mi
