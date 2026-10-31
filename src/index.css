@@ -10,10 +10,11 @@
     --brand-soft: 220 252 231;
   }
   html {
-    background: #f2f2f7;
+    background: #eef0f4;
   }
   body {
-    @apply text-ink bg-paper antialiased;
+    @apply text-ink antialiased;
+    background: transparent;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
@@ -25,9 +26,18 @@
 }
 
 @layer components {
-  /* Inset-grouped surface (Apple HIG): flat white on grouped gray, no border */
+  /* Content surface: a Liquid Glass panel over the tinted backdrop */
   .card {
-    @apply bg-card rounded-2xl;
+    @apply rounded-[22px];
+    isolation: isolate;
+    background: rgba(255, 255, 255, 0.56);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 0.5px solid rgba(255, 255, 255, 0.8);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.35),
+      0 6px 24px rgba(15, 23, 42, 0.07);
   }
   .card-pad {
     @apply card p-4;
@@ -46,17 +56,32 @@
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-opacity active:opacity-60 disabled:opacity-40 disabled:cursor-not-allowed select-none;
   }
+  /* liquid buttons: a light catch along the top edge + a colored glow */
   .btn-primary {
-    @apply btn bg-brand text-white px-4 py-3;
+    @apply btn bg-brand text-white px-4 py-3 rounded-full;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 55%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+      0 6px 18px rgb(var(--brand) / 0.32);
   }
   .btn-ghost {
-    @apply btn bg-fill text-brand px-4 py-3;
+    @apply btn text-brand px-4 py-3 rounded-full;
+    background: rgba(255, 255, 255, 0.6);
+    border: 0.5px solid rgba(255, 255, 255, 0.85);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 8px rgba(15, 23, 42, 0.06);
   }
   .btn-danger {
-    @apply btn bg-fill text-bad px-4 py-3;
+    @apply btn text-bad px-4 py-3 rounded-full;
+    background: rgba(255, 255, 255, 0.6);
+    border: 0.5px solid rgba(255, 255, 255, 0.85);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 8px rgba(15, 23, 42, 0.06);
   }
   .input {
-    @apply bg-fill rounded-xl px-3 py-2.5 text-ink nums placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-brand/40;
+    @apply rounded-xl px-3 py-2.5 text-ink nums placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-brand/40;
+    background: rgba(255, 255, 255, 0.62);
+    border: 0.5px solid rgba(255, 255, 255, 0.9);
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
   }
   .chip {
     @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
@@ -164,18 +189,52 @@
 }
 /* edge-to-edge bar (scroll-edge top bar, sticky headers) */
 .glass-bar {
-  background: rgba(242, 242, 247, 0.72);
+  background: rgba(255, 255, 255, 0.55);
   box-shadow: inset 0 -0.5px 0 rgba(0, 0, 0, 0.12);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass, .glass-sheet { background: rgba(255, 255, 255, 0.96); }
+  .glass, .glass-sheet, .card { background: rgba(255, 255, 255, 0.94); }
   .glass-dark { background: rgba(28, 28, 30, 0.94); }
   .glass-bar { background: rgba(242, 242, 247, 0.97); }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .glass, .glass-sheet { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .glass, .glass-sheet, .card { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .liquid-bg { background: #f2f2f7 !important; }
+  .liquid-bg > * { display: none; }
   .glass-dark { background: #1c1c1e; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .glass-bar { background: #f2f2f7; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .glass::before { display: none; }
 }
+}
+
+/* ---- Liquid backdrop ------------------------------------------------------
+   Glassmorphism needs color behind the glass. A fixed, softly drifting
+   mesh: two blobs tinted from the user's accent (--brand) plus two cool
+   neutrals, so the whole backdrop follows the chosen app color. */
+.liquid-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(180deg, #f4f6fa 0%, #eceff5 100%);
+}
+.liquid-bg > span {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.85;
+  will-change: transform;
+  animation: blob-drift 22s ease-in-out infinite alternate;
+}
+.liquid-bg > span:nth-child(1) { width: 70vmax; height: 70vmax; top: -30vmax; left: -25vmax; background: rgb(var(--brand) / 0.38); }
+.liquid-bg > span:nth-child(2) { width: 55vmax; height: 55vmax; top: 20vh; right: -30vmax; background: rgba(90, 200, 250, 0.32); animation-duration: 28s; animation-delay: -6s; }
+.liquid-bg > span:nth-child(3) { width: 60vmax; height: 60vmax; bottom: -30vmax; left: -10vmax; background: rgba(175, 160, 255, 0.28); animation-duration: 32s; animation-delay: -12s; }
+.liquid-bg > span:nth-child(4) { width: 40vmax; height: 40vmax; bottom: 10vh; right: -10vmax; background: rgb(var(--brand) / 0.22); animation-duration: 26s; animation-delay: -3s; }
+@keyframes blob-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(6vmax, 4vmax, 0) scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .liquid-bg > span { animation: none; }
 }

@@ -13,6 +13,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: 15,
+    date: '2026-10-31',
+    title: 'Glass everywhere',
+    points: [
+      'Cards are now frosted glass floating over a soft, slowly drifting color backdrop that follows your app color.',
+      'Buttons and fields got the glass treatment too. Reduce Transparency in your phone\'s accessibility settings switches everything back to solid.'
+    ]
+  },
+  {
     v: 14,
     date: '2026-10-28',
     title: 'Liquid Glass',

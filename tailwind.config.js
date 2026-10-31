@@ -3,7 +3,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        // RUNNER palette — Apple iOS light-mode system colors + one accent.
+        // RUNNER palette — Apple iOS light-mode system colors + one accent,
+        // tuned for Liquid Glass: surfaces/fills are translucent so the
+        // tinted backdrop shows through.
         // The accent is CSS-variable driven (see src/lib/theme.ts) so users can
         // recolor the whole app; channels keep Tailwind's /opacity modifiers.
         brand: {
@@ -15,9 +17,9 @@ export default {
         dim: '#6C6C70',    // secondaryLabel
         faint: '#AEAEB2',  // tertiaryLabel
         line: '#E5E5EA',   // separator
-        paper: '#F2F2F7',  // systemGroupedBackground
+        paper: 'rgb(255 255 255 / 0.5)', // inner wells + tracks on glass
         card: '#FFFFFF',   // secondarySystemGroupedBackground
-        fill: '#EEEEF0',   // tertiarySystemFill (buttons, inputs, tracks)
+        fill: 'rgb(118 118 128 / 0.12)', // tertiarySystemFill
         good: '#248A3D',
         bad: '#FF3B30'
       },

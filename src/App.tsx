@@ -5,6 +5,7 @@ import Record from './screens/Record';
 import Nutrition from './screens/Nutrition';
 import Profile from './screens/Profile';
 import Toast from './components/ui/Toast';
+import LiquidBackdrop from './components/ui/LiquidBackdrop';
 import { trackerSubscribe, trackerGet } from './lib/tracker';
 import { useStore } from './lib/storage';
 import { applyAccent } from './lib/theme';
@@ -42,7 +43,8 @@ export default function App() {
   }, [data.settings.accent]);
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-screen">
+      <LiquidBackdrop />
       <div
         className={`glass-bar fixed top-0 inset-x-0 z-30 transition-opacity duration-200 ${scrolled ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ paddingTop: 'env(safe-area-inset-top)' }}

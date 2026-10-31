@@ -9,6 +9,7 @@ import { accentHex } from '../lib/theme';
 import { toast } from '../lib/toast';
 import ShareCard from './ShareCard';
 import SportIcon from '../components/ui/SportIcon';
+import LiquidBackdrop from '../components/ui/LiquidBackdrop';
 
 /** Street (OpenStreetMap) or satellite (Esri World Imagery) base layer. */
 function makeTileLayer(satellite: boolean): L.TileLayer {
@@ -173,7 +174,8 @@ export default function ActivityDetail({
   const maxSplitPace = Math.max(...activity.splits.map((s) => s.seconds / Math.max(0.05, s.miles)), 1);
 
   return (
-    <div className="fixed inset-0 z-50 bg-paper overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto isolate bg-[#eef0f4]">
+      <LiquidBackdrop />
       <header
         className="sticky top-0 z-10 glass-bar"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
