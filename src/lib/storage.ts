@@ -45,7 +45,7 @@ export interface RunnerData {
   settings: {
     name: string;
     photo: string;      // data URL of the user's avatar ('' = initial tile)
-    accent: string;     // accent/brand color id (see lib/theme)
+    accent: string;     // legacy: app is always blue now (see lib/theme)
     weightLbs: number;
     weeklyGoalMiles: number;
     runBpm: number;
@@ -58,7 +58,7 @@ export function defaultData(): RunnerData {
     activities: [],
     training: { templates: [], logs: [] },
     nutrition: { entries: [], meals: [], profile: null, apiKey: '' },
-    settings: { name: 'Runner', photo: '', accent: 'green', weightLbs: 175, weeklyGoalMiles: 10, runBpm: 170, walkBpm: 120 }
+    settings: { name: 'Runner', photo: '', accent: 'blue', weightLbs: 175, weeklyGoalMiles: 10, runBpm: 170, walkBpm: 120 }
   };
 }
 

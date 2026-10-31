@@ -4,10 +4,10 @@
 
 @layer base {
   :root {
-    /* accent channels — green default, overwritten at runtime by applyAccent() */
-    --brand: 22 163 74;
-    --brand-dark: 21 128 61;
-    --brand-soft: 220 252 231;
+    /* accent channels — the app's fixed blue (see lib/theme) */
+    --brand: 37 99 235;
+    --brand-dark: 29 78 216;
+    --brand-soft: 219 234 254;
   }
   html {
     background: #eef0f4;

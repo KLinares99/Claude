@@ -5,12 +5,17 @@
  *  - renderTransparentRoute: the route outline alone on a transparent PNG
  *    (Strava's "transparent log" export), for pasting onto photos.
  *  - renderStoryCard: a 1080×1920 Instagram-Story-style stats card.
+ *
+ * Look: Liquid Glassmorphism — a colorful "liquid" mesh (or the user's photo)
+ * with frosted glass panels on top. A panel is a blurred copy of what's
+ * beneath it (ctx.filter), a light tint, a diagonal sheen and a bright rim.
+ * Where ctx.filter is unsupported the panel is just the tint + sheen + rim.
  */
 import type { LatLng } from './run';
 import { fmtClock, paceFor } from './run';
 import type { Activity } from './storage';
 
-export const BRAND = '#FC4C02';
+export const BRAND = '#2563EB';
 
 const FONT = `-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif`;
 
@@ -101,14 +106,22 @@ export function renderTransparentRoute(canvas: HTMLCanvasElement, route: LatLng[
 
 // ---- story card --------------------------------------------------------------
 
-export type GradientId = 'orange' | 'ink' | 'sunrise' | 'forest';
+export type GradientId = 'blue' | 'ink' | 'sunrise' | 'forest';
 
-/** Diagonal two-stop gradients — also used by the UI for the picker swatches. */
+/** Base diagonal of each liquid theme — also used by the UI for the swatches. */
 export const GRADIENTS: Record<GradientId, [string, string]> = {
-  orange: ['#FC4C02', '#B23300'],
-  ink: ['#2B2E36', '#0E0F12'],
-  sunrise: ['#FF7A45', '#FFC24B'],
-  forest: ['#1F6B4C', '#0E2E22']
+  blue: ['#3B82F6', '#1E1B4B'],
+  ink: ['#2B2E36', '#0B0C10'],
+  sunrise: ['#FF8A4C', '#B0185E'],
+  forest: ['#10B981', '#0B2A22']
+};
+
+/** Soft color blobs layered over each base — the "liquid" the glass refracts. */
+const BLOBS: Record<GradientId, string[]> = {
+  blue: ['rgba(96,165,250,0.95)', 'rgba(167,139,250,0.8)', 'rgba(34,211,238,0.65)'],
+  ink: ['rgba(37,99,235,0.6)', 'rgba(139,92,246,0.45)', 'rgba(56,189,248,0.4)'],
+  sunrise: ['rgba(255,200,80,0.9)', 'rgba(255,94,135,0.75)', 'rgba(255,122,69,0.75)'],
+  forest: ['rgba(52,211,153,0.85)', 'rgba(34,211,238,0.55)', 'rgba(190,242,100,0.5)']
 };
 
 export type CardBackground =
@@ -124,7 +137,7 @@ export interface StoryCardOptions {
 const CARD_W = 1080;
 const CARD_H = 1920;
 
-/** 1080×1920 Instagram-Story-style share card with the Runner branding. */
+/** 1080×1920 Instagram-Story-style share card: liquid backdrop + glass panels. */
 export function renderStoryCard(canvas: HTMLCanvasElement, activity: Activity, opts: StoryCardOptions) {
   canvas.width = CARD_W;
   canvas.height = CARD_H;
@@ -132,68 +145,76 @@ export function renderStoryCard(canvas: HTMLCanvasElement, activity: Activity, o
   if (!ctx) return;
   ctx.clearRect(0, 0, CARD_W, CARD_H);
 
-  // background
+  // backdrop — painted on its own canvas so glass panels can blur it
+  const back = document.createElement('canvas');
+  back.width = CARD_W;
+  back.height = CARD_H;
+  const bctx = back.getContext('2d');
+  if (!bctx) return;
   if (opts.background.type === 'gradient') {
-    const [a, b] = GRADIENTS[opts.background.id];
-    const g = ctx.createLinearGradient(0, 0, CARD_W, CARD_H);
-    g.addColorStop(0, a);
-    g.addColorStop(1, b);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, CARD_W, CARD_H);
+    drawLiquidBackground(bctx, CARD_W, CARD_H, opts.background.id);
   } else {
-    drawCover(ctx, opts.background.image, CARD_W, CARD_H);
-    // scrim: heavier at top and bottom so white text survives bright photos
-    const g = ctx.createLinearGradient(0, 0, 0, CARD_H);
-    g.addColorStop(0, 'rgba(0,0,0,0.55)');
-    g.addColorStop(0.35, 'rgba(0,0,0,0.20)');
-    g.addColorStop(0.65, 'rgba(0,0,0,0.20)');
-    g.addColorStop(1, 'rgba(0,0,0,0.62)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, CARD_W, CARD_H);
+    drawCover(bctx, opts.background.image, CARD_W, CARD_H);
+    // light scrim so white text survives bright photos (the glass does the rest)
+    const g = bctx.createLinearGradient(0, 0, 0, CARD_H);
+    g.addColorStop(0, 'rgba(0,0,0,0.35)');
+    g.addColorStop(0.5, 'rgba(0,0,0,0.10)');
+    g.addColorStop(1, 'rgba(0,0,0,0.40)');
+    bctx.fillStyle = g;
+    bctx.fillRect(0, 0, CARD_W, CARD_H);
   }
+  ctx.drawImage(back, 0, 0);
 
   const hasRoute = activity.route.length > 1;
   const cx = CARD_W / 2;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
 
-  // no route → nudge the whole block down so the layout stays balanced
-  let y = hasRoute ? 250 : 420;
+  drawLogoRow(ctx, cx, hasRoute ? 200 : 360, opts.accent ?? BRAND);
 
-  drawLogoRow(ctx, cx, y, opts.accent ?? BRAND);
+  // stats panel
+  const px = 80, pw = CARD_W - 160, ph = 760;
+  const py = hasRoute ? 320 : 520;
+  drawGlassPanel(ctx, back, px, py, pw, ph, 64);
 
-  // huge distance
-  y += hasRoute ? 330 : 350;
+  let y = py + 290;
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `900 250px ${FONT}`;
+  ctx.font = `800 230px ${FONT}`;
   ctx.fillText(activity.miles.toFixed(2), cx, y);
-  y += 88;
-  drawLabel(ctx, 'MILES', cx, y, 40);
+  y += 72;
+  drawLabel(ctx, 'Miles', cx, y, 40);
 
-  // pace / moving-time columns
-  y += 180;
+  y += 150;
   const colL = CARD_W * 0.3;
   const colR = CARD_W * 0.7;
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `800 92px ${FONT}`;
+  ctx.font = `700 84px ${FONT}`;
   ctx.fillText(`${paceFor(activity.seconds, activity.miles)}/mi`, colL, y);
   ctx.fillText(fmtClock(activity.seconds), colR, y);
-  y += 66;
-  drawLabel(ctx, 'PACE', colL, y, 30);
-  drawLabel(ctx, 'MOVING TIME', colR, y, 30);
+  y += 58;
+  drawLabel(ctx, 'Pace', colL, y, 32);
+  drawLabel(ctx, 'Moving time', colR, y, 32);
 
-  // activity name
-  y += 130;
+  // hairline + activity name
+  y += 50;
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fillRect(px + 70, y, pw - 140, 2);
+  y += 86;
   ctx.fillStyle = 'rgba(255,255,255,0.95)';
-  ctx.font = `600 52px ${FONT}`;
+  ctx.font = `600 50px ${FONT}`;
   ctx.fillText(activity.name, cx, y);
 
-  // route outline band (skipped entirely for manual entries)
+  // route panel (skipped entirely for manual entries)
   if (hasRoute) {
-    const bandY = y + 90;
-    const bandH = Math.max(200, 1720 - bandY);
-    const pts = projectRoute(activity.route, 180, bandY, CARD_W - 360, bandH);
+    const ry = py + ph + 40;
+    const rh = CARD_H - 190 - ry;
+    drawGlassPanel(ctx, back, px, ry, pw, rh, 64);
+    const pts = projectRoute(activity.route, px + 90, ry + 80, pw - 180, rh - 160);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 20;
     strokeRoute(ctx, pts, opts.routeColor ?? '#FFFFFF', 12);
+    ctx.restore();
   }
 
   // date line
@@ -202,7 +223,7 @@ export function renderStoryCard(canvas: HTMLCanvasElement, activity: Activity, o
     d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +
     ' at ' +
     d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
   ctx.font = `600 36px ${FONT}`;
   ctx.fillText(dateStr, cx, CARD_H - 96);
 }
@@ -233,18 +254,14 @@ export function renderFlyoverFrame(
   if (transparent) {
     ctx.clearRect(0, 0, VID_W, VID_H);
   } else {
-    // dark background
-    const bg = ctx.createLinearGradient(0, 0, VID_W, VID_H);
-    bg.addColorStop(0, '#1B1D23');
-    bg.addColorStop(1, '#0C0D10');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, VID_W, VID_H);
-    drawLogoRow(ctx, cx, 230, accent);
+    // static layer (liquid backdrop, logo, glass panels) is built once per
+    // activity and reused for every frame — blurring is too costly per frame
+    ctx.drawImage(flyoverStatic(activity, accent), 0, 0);
   }
 
   // route band — centered & taller when transparent (no stat block below)
-  const bandY = transparent ? 260 : 420;
-  const bandH = transparent ? 1400 : 900;
+  const bandY = transparent ? 260 : FLY_ROUTE.y + 70;
+  const bandH = transparent ? 1400 : FLY_ROUTE.h - 140;
   const pts = projectRoute(activity.route, 150, bandY, VID_W - 300, bandH);
 
   // full route, faint
@@ -281,27 +298,56 @@ export function renderFlyoverFrame(
   // live readouts
   const miles = activity.miles * p;
   const secs = Math.round(activity.seconds * p);
-  let y = bandY + bandH + 190;
+  let y = FLY_STATS.y + 230;
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `900 220px ${FONT}`;
+  ctx.font = `800 200px ${FONT}`;
   ctx.fillText(miles.toFixed(2), cx, y);
-  y += 78;
-  drawLabel(ctx, 'MILES', cx, y, 38);
+  y += 66;
+  drawLabel(ctx, 'Miles', cx, y, 36);
 
-  y += 170;
+  y += 130;
   const colL = VID_W * 0.3;
   const colR = VID_W * 0.7;
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `800 84px ${FONT}`;
+  ctx.font = `700 76px ${FONT}`;
   ctx.fillText(fmtClock(secs), colL, y);
   ctx.fillText(`${paceFor(secs, miles)}/mi`, colR, y);
-  y += 60;
-  drawLabel(ctx, 'TIME', colL, y, 28);
-  drawLabel(ctx, 'PACE', colR, y, 28);
+  y += 54;
+  drawLabel(ctx, 'Time', colL, y, 30);
+  drawLabel(ctx, 'Pace', colR, y, 30);
 
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
   ctx.font = `600 46px ${FONT}`;
-  ctx.fillText(activity.name, cx, VID_H - 120);
+  ctx.fillText(activity.name, cx, VID_H - 90);
+}
+
+// glass panel slots on the 1080×1920 flyover frame
+const FLY_ROUTE = { x: 70, y: 320, w: VID_W - 140, h: 900 };
+const FLY_STATS = { x: 70, y: 1260, w: VID_W - 140, h: 500 };
+
+let flyCache: { key: string; canvas: HTMLCanvasElement } | null = null;
+
+/** Liquid backdrop + logo + empty glass panels for the flyover, cached. */
+function flyoverStatic(activity: Activity, accent: string): HTMLCanvasElement {
+  const key = `${activity.id}|${accent}`;
+  if (flyCache?.key === key) return flyCache.canvas;
+  const back = document.createElement('canvas');
+  back.width = VID_W;
+  back.height = VID_H;
+  const bctx = back.getContext('2d')!;
+  drawLiquidBackground(bctx, VID_W, VID_H, 'ink');
+  const out = document.createElement('canvas');
+  out.width = VID_W;
+  out.height = VID_H;
+  const octx = out.getContext('2d')!;
+  octx.drawImage(back, 0, 0);
+  octx.textAlign = 'center';
+  octx.textBaseline = 'alphabetic';
+  drawLogoRow(octx, VID_W / 2, 200, accent);
+  drawGlassPanel(octx, back, FLY_ROUTE.x, FLY_ROUTE.y, FLY_ROUTE.w, FLY_ROUTE.h, 64, true);
+  drawGlassPanel(octx, back, FLY_STATS.x, FLY_STATS.y, FLY_STATS.w, FLY_STATS.h, 64, true);
+  flyCache = { key, canvas: out };
+  return out;
 }
 
 /**
@@ -408,50 +454,127 @@ function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
   ctx.closePath();
 }
 
-/** Letter-spaced text centered on cx (canvas has no reliable letterSpacing). */
-function spacedText(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, spacing: number) {
-  const chars = [...text];
-  const widths = chars.map((c) => ctx.measureText(c).width);
-  const total = widths.reduce((a, b) => a + b, 0) + spacing * (chars.length - 1);
-  const prevAlign = ctx.textAlign;
-  ctx.textAlign = 'left';
-  let x = cx - total / 2;
-  chars.forEach((c, i) => {
-    ctx.fillText(c, x, y);
-    x += widths[i] + spacing;
-  });
-  ctx.textAlign = prevAlign;
+function drawLabel(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, size: number) {
+  ctx.fillStyle = 'rgba(255,255,255,0.78)';
+  ctx.font = `600 ${size}px ${FONT}`;
+  ctx.fillText(text, cx, y);
 }
 
-function drawLabel(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, size: number) {
-  ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  ctx.font = `700 ${size}px ${FONT}`;
-  spacedText(ctx, text, cx, y, size * 0.22);
+/** Base diagonal + three big soft color blobs — the liquid behind the glass. */
+function drawLiquidBackground(ctx: CanvasRenderingContext2D, w: number, h: number, id: GradientId) {
+  const [a, b] = GRADIENTS[id];
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, a);
+  g.addColorStop(1, b);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  const spots: Array<[number, number, number]> = [[0.12, 0.14, 0.62], [0.95, 0.5, 0.55], [0.25, 0.92, 0.6]];
+  const big = Math.max(w, h);
+  BLOBS[id].forEach((color, i) => {
+    const [fx, fy, fr] = spots[i];
+    const x = fx * w, y = fy * h, r = fr * big;
+    const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, color);
+    rg.addColorStop(1, color.replace(/[\d.]+\)$/, '0)'));
+    ctx.fillStyle = rg;
+    ctx.fillRect(0, 0, w, h);
+  });
 }
 
 /**
- * Runner logomark (the app-icon tile: orange rounded square, white ascending
- * route line + endpoint dot, 48-unit viewBox) plus the "RUNNER" wordmark,
- * drawn as one centered row. `cy` is the vertical center of the row.
+ * Frosted Liquid Glass panel: soft drop shadow, a blurred copy of `source`
+ * (what's behind) clipped to the rounded rect, a light tint, a diagonal
+ * sheen, then a rim that's bright on top and fades toward the bottom.
+ */
+function drawGlassPanel(
+  ctx: CanvasRenderingContext2D, source: HTMLCanvasElement,
+  x: number, y: number, w: number, h: number, r: number, dark = false
+) {
+  // lift shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.22)';
+  ctx.shadowBlur = 60;
+  ctx.shadowOffsetY = 24;
+  roundedRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  roundedRect(ctx, x, y, w, h, r);
+  ctx.clip();
+  if ('filter' in ctx) {
+    ctx.filter = 'blur(40px) saturate(160%)';
+    ctx.drawImage(source, 0, 0);
+    ctx.filter = 'none';
+  }
+  ctx.fillStyle = dark ? 'rgba(20,24,40,0.30)' : 'rgba(255,255,255,0.16)';
+  ctx.fillRect(x, y, w, h);
+  const sheen = ctx.createLinearGradient(x, y, x + w * 0.7, y + h * 0.7);
+  sheen.addColorStop(0, `rgba(255,255,255,${dark ? 0.14 : 0.26})`);
+  sheen.addColorStop(0.5, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sheen;
+  ctx.fillRect(x, y, w, h);
+  ctx.restore();
+
+  // rim: bright top edge fading down
+  ctx.save();
+  roundedRect(ctx, x + 1.5, y + 1.5, w - 3, h - 3, r - 1.5);
+  const rim = ctx.createLinearGradient(0, y, 0, y + h);
+  rim.addColorStop(0, `rgba(255,255,255,${dark ? 0.5 : 0.75})`);
+  rim.addColorStop(0.35, 'rgba(255,255,255,0.18)');
+  rim.addColorStop(1, 'rgba(255,255,255,0.32)');
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * Runner logomark as a glass app-icon tile (accent gradient, sheen, rim,
+ * white ascending route line + endpoint dot on a 48-unit grid) plus the
+ * "Runner" wordmark, drawn as one centered row. `cy` is the row's center.
  */
 function drawLogoRow(ctx: CanvasRenderingContext2D, cx: number, cy: number, accent: string = BRAND) {
-  const TILE = 78;
-  const GAP = 26;
-  const wordSize = 58;
-  const wordSpacing = wordSize * 0.22;
+  const TILE = 84;
+  const GAP = 24;
+  const wordSize = 60;
 
-  ctx.font = `900 ${wordSize}px ${FONT}`;
-  const word = 'RUNNER';
-  const wordW =
-    [...word].reduce((a, c) => a + ctx.measureText(c).width, 0) + wordSpacing * (word.length - 1);
+  ctx.font = `700 ${wordSize}px ${FONT}`;
+  const word = 'Runner';
+  const wordW = ctx.measureText(word).width;
   const totalW = TILE + GAP + wordW;
   const left = cx - totalW / 2;
   const tileY = cy - TILE / 2;
+  const R = TILE * 0.27;
 
-  // tile
-  ctx.fillStyle = accent;
-  roundedRect(ctx, left, tileY, TILE, TILE, TILE * 0.25);
+  // tile: accent gradient with a glass sheen and rim
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.25)';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 8;
+  roundedRect(ctx, left, tileY, TILE, TILE, R);
+  const tg = ctx.createLinearGradient(left, tileY, left, tileY + TILE);
+  tg.addColorStop(0, '#60A5FA');
+  tg.addColorStop(1, accent);
+  ctx.fillStyle = tg;
   ctx.fill();
+  ctx.restore();
+  ctx.save();
+  roundedRect(ctx, left, tileY, TILE, TILE, R);
+  ctx.clip();
+  const sh = ctx.createLinearGradient(left, tileY, left + TILE * 0.8, tileY + TILE * 0.8);
+  sh.addColorStop(0, 'rgba(255,255,255,0.45)');
+  sh.addColorStop(0.5, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sh;
+  ctx.fillRect(left, tileY, TILE, TILE);
+  ctx.restore();
+  ctx.save();
+  roundedRect(ctx, left + 1, tileY + 1, TILE - 2, TILE - 2, R - 1);
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
 
   // route line + dot, scaled from the 48×48 app-icon path
   const s = TILE / 48;
@@ -474,6 +597,9 @@ function drawLogoRow(ctx: CanvasRenderingContext2D, cx: number, cy: number, acce
 
   // wordmark
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `900 ${wordSize}px ${FONT}`;
-  spacedText(ctx, word, left + TILE + GAP + wordW / 2, cy + wordSize * 0.36, wordSpacing);
+  ctx.font = `700 ${wordSize}px ${FONT}`;
+  const prev = ctx.textAlign;
+  ctx.textAlign = 'left';
+  ctx.fillText(word, left + TILE + GAP, cy + wordSize * 0.35);
+  ctx.textAlign = prev;
 }

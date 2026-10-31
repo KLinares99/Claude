@@ -25,7 +25,7 @@ export default function ShareCard({
   const hasRoute = activity.route.length > 1;
   const [mode, setMode] = useState<Mode>(hasRoute ? 'route' : 'card');
   const [routeColor, setRouteColor] = useState(accent);
-  const [bg, setBg] = useState<CardBackground>({ type: 'gradient', id: 'orange' });
+  const [bg, setBg] = useState<CardBackground>({ type: 'gradient', id: 'blue' });
   const [canShare, setCanShare] = useState(false);
   const [videoPct, setVideoPct] = useState<number | null>(null);
   const [transparentVid, setTransparentVid] = useState(false);
@@ -170,13 +170,13 @@ export default function ShareCard({
         </div>
 
         {/* mode toggle */}
-        <div className="card p-1 grid grid-cols-3 gap-1">
+        <div className="bg-fill rounded-[10px] p-0.5 grid grid-cols-3 gap-0.5">
           <button
             onClick={() => setMode('route')}
             disabled={!hasRoute}
             title={hasRoute ? undefined : 'No GPS route on this activity'}
             className={`rounded-xl py-2 text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              mode === 'route' ? 'bg-ink text-white' : 'text-dim hover:text-ink'
+              mode === 'route' ? 'bg-white text-ink shadow-[0_1px_3px_rgba(0,0,0,0.12)]' : 'text-ink/70'
             }`}
           >
             Route PNG
@@ -184,7 +184,7 @@ export default function ShareCard({
           <button
             onClick={() => setMode('card')}
             className={`rounded-xl py-2 text-xs font-bold transition-colors ${
-              mode === 'card' ? 'bg-ink text-white' : 'text-dim hover:text-ink'
+              mode === 'card' ? 'bg-white text-ink shadow-[0_1px_3px_rgba(0,0,0,0.12)]' : 'text-ink/70'
             }`}
           >
             Story card
@@ -194,7 +194,7 @@ export default function ShareCard({
             disabled={!videoSupported}
             title={videoSupported ? undefined : 'Video isn’t supported in this browser'}
             className={`rounded-xl py-2 text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              mode === 'video' ? 'bg-ink text-white' : 'text-dim hover:text-ink'
+              mode === 'video' ? 'bg-white text-ink shadow-[0_1px_3px_rgba(0,0,0,0.12)]' : 'text-ink/70'
             }`}
           >
             Flyover video

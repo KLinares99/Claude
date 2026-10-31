@@ -13,6 +13,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: 16,
+    date: '2026-10-31',
+    title: 'Glass share cards + new icon',
+    points: [
+      'Story cards and flyover videos now use frosted glass panels over a liquid color background.',
+      'New glass app icon. To see it on your home screen, remove Runner and add it again from Safari.',
+      'Runner is always blue now, so the App color option is gone.'
+    ]
+  },
+  {
     v: 15,
     date: '2026-10-31',
     title: 'Glass everywhere',

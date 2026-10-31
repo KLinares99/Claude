@@ -5,7 +5,7 @@ import './index.css'
 import { getData } from './lib/storage'
 import { applyAccent } from './lib/theme'
 
-// Paint the saved accent before first render so there's no orange flash.
+// Paint the accent before first render so there's no color flash.
 applyAccent(getData().settings.accent)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

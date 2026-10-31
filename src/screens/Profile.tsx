@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { Trophy, Download, Upload, Shield, Camera, Check } from 'lucide-react';
+import { Trophy, Download, Upload, Shield, Camera } from 'lucide-react';
 import {
   useStore, weeklyMileage, bestEfforts, computeStreak, defaultData, type RunnerData
 } from '../lib/storage';
 import { fmtClock, fmtTime, paceFor } from '../lib/run';
-import { ACCENTS, accentHex } from '../lib/theme';
+import { accentHex } from '../lib/theme';
 import { getUsdaKey, setUsdaKey } from '../lib/foodSearch';
 import { toast } from '../lib/toast';
 import { RaceTimesCard, NutritionSummaryCard } from '../components/StatsCards';
@@ -163,29 +163,6 @@ export default function Profile({ onOpenNutrition }: { onOpenNutrition?: () => v
           </div>
         </div>
 
-        {/* accent color — recolors the whole app */}
-        <div className="mt-4 pt-4 border-t border-line">
-          <div className="label mb-2">App color</div>
-          <div className="flex gap-2.5">
-            {ACCENTS.map((a) => {
-              const on = (data.settings.accent || 'orange') === a.id;
-              return (
-                <button
-                  key={a.id}
-                  onClick={() => update((d) => ({ ...d, settings: { ...d.settings, accent: a.id } }))}
-                  aria-label={a.label}
-                  title={a.label}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90 ${
-                    on ? 'ring-2 ring-offset-2 ring-ink' : ''
-                  }`}
-                  style={{ background: a.hex }}
-                >
-                  {on && <Check size={16} className="text-white" strokeWidth={3} />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
         <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={pickPhoto} />
       </div>
 
